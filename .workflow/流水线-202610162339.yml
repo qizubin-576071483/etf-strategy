@@ -12,7 +12,7 @@ stages:
   - name: update-stage
     displayName: 更新价格
     steps:
-      - step: build@shell
+      - step: shell@default
         name: shell-build
         displayName: Shell 构建
         inputs:
