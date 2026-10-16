@@ -1,0 +1,41 @@
+version: "1.0"
+name: 流水线-202610162339
+displayName: ETF-价格每日更新
+stages:
+- name: 未命名
+  displayName: 未命名
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: build@python
+    name: 1e572696-d92a-46fe-a8fc-c77556e0d3ac
+    displayName: Python 构建
+    pythonVersion: "3.10"
+    commands:
+    - pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+    - pip install requests
+    - python fetch_prices.py
+    - git config --global user.email "action@gitee.com"
+    - git config --global user.name "Gitee Go"
+    - git add data/prices.json data/rank_history.json
+    - git commit -m "Auto update prices" || echo "No changes"
+    - git push
+    artifacts:
+    - name: BUILD_ARTIFACT
+      path:
+      - ./
+      type: .tar.gz
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+triggers:
+  trigger: auto
+  push:
+    branches:
+      prefix:
+      - ""
+      precise: []
+      include: []
+notify: []
