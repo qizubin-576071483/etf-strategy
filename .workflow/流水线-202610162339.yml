@@ -9,21 +9,20 @@ triggers:
         - main
 
 stages:
-  - stage:
-      name: update-stage
-      displayName: 更新价格
-      steps:
-        - step: python@latest
-          name: python-build
-          displayName: Python 构建
-          inputs:
-            pythonVersion: "3.10"
-            commands:
-              - pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-              - pip install requests
-              - python fetch_prices.py
-              - git config --global user.email "action@gitee.com"
-              - git config --global user.name "Gitee Go"
-              - git add data/prices.json data/rank_history.json
-              - git commit -m "Auto update prices" || echo "No changes"
-              - git push
+  - name: update-stage
+    displayName: 更新价格
+    steps:
+      - step: python@latest
+        name: python-build
+        displayName: Python 构建
+        inputs:
+          pythonVersion: "3.10"
+          commands:
+            - pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+            - pip install requests
+            - python fetch_prices.py
+            - git config --global user.email "action@gitee.com"
+            - git config --global user.name "Gitee Go"
+            - git add data/prices.json data/rank_history.json
+            - git commit -m "Auto update prices" || echo "No changes"
+            - git push
