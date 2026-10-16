@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>策略A · 12支(10日) · 排名轨迹 · 修复版</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#0b0f19;color:#e2e8f0;padding-bottom:40px;}
+        .header{background:linear-gradient(135deg,#0ea5e9,#6366f1);padding:24px 20px 32px;text-align:center;}
+        .header h1{font-size:20px;font-weight:700;letter-spacing:1px;}
+        .header .date{font-size:13px;opacity:0.85;margin-top:6px;}
+        .container{padding:16px;max-width:500px;margin:0 auto;}
+        .card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155;box-shadow:0 4px 20px rgba(0,0,0,0.3);}
+        .card-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+        .icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+        .bg-purple{background:#8b5cf620;color:#a78bfa;}.bg-green{background:#22c55e20;color:#4ade80;}.bg-amber{background:#f59e0b20;color:#fbbf24;}
+        .btn{width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:14px;letter-spacing:1px;}
+        .btn:active{transform:scale(0.98);opacity:0.9;}
+        .btn-small{padding:6px 12px;font-size:12px;width:auto;margin-top:0;background:#334155;border-radius:8px;color:#e2e8f0;border:none;cursor:pointer;}
+        .tip{font-size:11px;color:#64748b;line-height:1.6;margin-top:8px;padding:10px;background:#0f172a;border-radius:8px;}
+        .tip strong{color:#e2e8f0;}
+        .etf-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #334155;flex-wrap:wrap;}
+        .etf-row:last-child{border-bottom:none;}
+        .etf-name{flex:1;min-width:80px;font-size:13px;}
+        .etf-name .code{font-size:10px;color:#64748b;}
+        .etf-count{font-size:11px;color:#94a3b8;margin-right:4px;}
+        .rank-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0f172a;border-radius:10px;margin-bottom:8px;border:1px solid #334155;}
+        .rank-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+        .rank-1{background:#f87171;color:#fff;}.rank-2{background:#38bdf8;color:#fff;}.rank-3{background:#4ade80;color:#0b0f19;}.rank-4{background:#fbbf24;color:#78350f;}.rank-5{background:#334155;color:#94a3b8;}
+        .rank-info{flex:1;font-size:13px;}.rank-info .code{font-size:10px;color:#64748b;}
+        .rank-val{font-size:14px;font-weight:700;color:#38bdf8;}
+        textarea{width:100%;padding:10px;background:#0f172a;border:1px solid #475569;border-radius:10px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;outline:none;margin-top:6px;}
+        textarea:focus{border-color:#38bdf8;}
+        .batch-area{margin:12px 0;}.error-msg{color:#f87171;font-size:11px;margin-top:6px;}
+        .settings-toggle{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+        .settings-panel{background:#0f172a;border-radius:12px;padding:16px;margin-bottom:14px;border:1px solid #334155;}
+        .input-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+        .input-group{flex:1;min-width:60px;}
+        .input-group label{display:block;font-size:11px;color:#94a3b8;margin-bottom:5px;}
+        .input-group input,.input-group select{width:100%;padding:8px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font-size:13px;outline:none;}
+        .chart-container{background:#0f172a;border-radius:12px;padding:14px;margin-top:14px;border:1px solid #334155;position:relative;}
+        .chart-container canvas{width:100%;height:220px;display:block;touch-action:none;}
+        .chart-legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px;}
+        .chart-legend span{font-size:10px;display:flex;align-items:center;gap:4px;}
+        .chart-sub{font-size:10px;color:#94a3b8;margin-top:4px;text-align:center;}
+        .hidden{display:none;}
+        .data-status{font-size:12px;color:#4ade80;background:#0f172a;padding:6px 12px;border-radius:8px;margin-bottom:10px;display:flex;align-items:center;gap:8px;border:1px solid #22c55e40;}
+        .data-status .label{color:#94a3b8;}
+        .trade-log{font-size:12px;color:#94a3b8;background:#0f172a;padding:8px 12px;border-radius:8px;margin-top:10px;border:1px solid #334155;line-height:1.8;}
+        .trade-log .highlight{color:#fbbf24;font-weight:700;}
+        .warning-banner{background:#7c2d1210;border:1px solid #f59e0b40;color:#fbbf24;font-size:12px;padding:10px 14px;border-radius:10px;margin-bottom:12px;line-height:1.6;}
+        .r2-tag{font-size:10px;padding:2px 6px;border-radius:4px;background:#334155;color:#94a3b8;margin-left:6px;}
+        .r2-tag.full{background:#05966920;color:#4ade80;}
+        .r2-tag.partial{background:#f59e0b20;color:#fbbf24;}
+    </style>
+</head>
+<body>
+<div class="header"><h1>⚡ 策略A · 12支ETF轮动 (10日) · 修复版</h1><div class="date" id="currentDate">--</div></div>
+<div class="container">
+    <div class="settings-toggle" onclick="toggleSettings()">
+        <span style="font-weight:600;">⚙️ 参数设置</span>
+        <span id="settingsArrow">▶</span>
+    </div>
+    <div id="settingsPanel" class="settings-panel hidden">
+        <div class="input-row">
+            <div class="input-group"><label>波动率窗口 (天)</label><input type="number" id="setVolWindow" value="20" min="5" max="60" onchange="saveParams()"></div>
+            <div class="input-group"><label>最小R²阈值</label><input type="number" id="setMinR2" value="0.30" step="0.05" min="0" max="1" onchange="saveParams()"></div>
+        </div>
+        <div class="input-row">
+            <div class="input-group"><label>短期R²权重</label><input type="number" id="setR2WeightShort" value="0.5" step="0.05" min="0" max="1" onchange="saveParams()"></div>
+            <div class="input-group"><label>相关性阈值</label><input type="number" id="setCorrThreshold" value="0.75" step="0.05" min="0" max="1" onchange="saveParams()"></div>
+        </div>
+        <div class="tip"><strong>📐 算法说明：</strong>得分 = (对数年化收益率(10日) / 年化波动率(20日)) × 加权R²(20日+60日)<br>保险丝：10日收益≤0 或 加权R²＜0.30 → 直接淘汰<br>风险平价：波动率倒数加权（下限1.5%）<br>相关性：逐对检查，60日收益率Pearson相关系数 &gt; 0.75 则跳过</div>
+    </div>
+    <div class="card">
+        <div class="card-title"><div class="icon bg-purple">📊</div>每日收盘价录入</div>
+        <div class="tip">🔹 数据来自统一的 <strong>data/prices.json</strong>（所有策略共用）<br>🔹 每日粘贴 <strong>最新收盘价</strong>（支持表格、名称模糊匹配）<br>🔹 指定日期（默认今天），系统自动记录排名历史</div>
+        <div id="dataWarning" class="warning-banner hidden"></div>
+        <div class="batch-area">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <label style="font-size:13px; color:#94a3b8;">📅 日期</label>
+                <input type="date" id="recordDate" style="background:#0f172a; border:1px solid #475569; border-radius:8px; color:#e2e8f0; padding:6px 10px; font-size:13px; outline:none; flex:1;">
+            </div>
+            <textarea id="batchInput" rows="5" placeholder="518880,8.892&#10;510880,3.282&#10;510300,4.751&#10;..."></textarea>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn-small" onclick="batchAddPrices()" style="flex:1;">✅ 批量添加</button>
+                <button class="btn-small" onclick="fillTodayExample()" style="flex:1;">📋 填入最新价</button>
+            </div>
+            <div id="batchError" class="error-msg"></div>
+        </div>
+        <div id="etfListContainer">
+            <div class="data-status" id="dataStatus"><span class="label">📅 数据截至</span><span id="dataAsOfDate">--</span></div>
+            <div id="etfList"></div>
+        </div>
+        <button class="btn" onclick="calcMomentum()">🔄 计算排名</button>
+    </div>
+    <div class="card" id="momentumResult" style="display:none;">
+        <div class="card-title"><div class="icon bg-green">🏆</div>动量排名</div>
+        <div id="rankList"></div>
+        <div id="tradeAdvice" style="margin-top:14px; padding:14px; background:#0f172a; border-radius:10px; font-size:13px; line-height:1.8;"></div>
+        <div id="tradeLog" class="trade-log"></div>
+    </div>
+    <div class="card" id="chartCard" style="display:none;">
+        <div class="card-title"><div class="icon bg-amber">📈</div>12支ETF排名轨迹</div>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+            <div class="chart-legend" id="chartLegend"></div>
+            <div class="chart-sub">纵轴为排名（1最高，4次之），线条向上=排名走强</div>
+        </div>
+        <button class="btn-small" onclick="clearHistory()" style="margin-top:10px;background:#450a0a;">🗑️ 清空历史</button>
+    </div>
+</div>
+<script>
+// ===== 配置 =====
+const STORAGE_PREFIX = 'etf_12_';
+const DATA_FILE = 'data/prices.json';
+
+document.getElementById('recordDate').value = new Date().toISOString().slice(0,10);
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN', {year:'numeric', month:'long', day:'numeric'});
+
+// ===== ETF列表 =====
+const etfData = [
+    { name: '黄金ETF华安', code: '518880' }, { name: '红利ETF华泰柏瑞', code: '510880' },
+    { name: '沪深300ETF华泰柏瑞', code: '510300' }, { name: '有色金属ETF南方', code: '512400' },
+    { name: '券商ETF华宝', code: '512000' }, { name: '医药ETF易方达', code: '512010' },
+    { name: '酒ETF鹏华', code: '512690' }, { name: '新能源车ETF华夏', code: '515030' },
+    { name: '机器人ETF华夏', code: '562500' }, { name: '通信ETF国泰', code: '515880' },
+    { name: '人工智能ETF易方达', code: '159819' }, { name: '半导体ETF国联安', code: '512480' }
+];
+
+const FIXED_COLORS = ['#f87171','#38bdf8','#4ade80','#fbbf24','#c084fc','#fb923c','#2dd4bf','#e879f9','#60a5fa','#f472b6','#a3e635','#facc15'];
+
+// ===== 参数管理 =====
+const DEFAULT_PARAMS = { volWindow: 20, minR2: 0.30, r2WeightShort: 0.5, corrThreshold: 0.75 };
+let params = { ...DEFAULT_PARAMS };
+
+function loadParams() {
+    const saved = localStorage.getItem(STORAGE_PREFIX + 'params');
+    if (saved) try { params = { ...DEFAULT_PARAMS, ...JSON.parse(saved) }; } catch(e){}
+    document.getElementById('setVolWindow').value = params.volWindow;
+    document.getElementById('setMinR2').value = params.minR2;
+    document.getElementById('setR2WeightShort').value = params.r2WeightShort;
+    document.getElementById('setCorrThreshold').value = params.corrThreshold;
+}
+function saveParams() {
+    params.volWindow = parseInt(document.getElementById('setVolWindow').value) || 20;
+    params.minR2 = parseFloat(document.getElementById('setMinR2').value) || 0.30;
+    params.r2WeightShort = parseFloat(document.getElementById('setR2WeightShort').value) || 0.5;
+    params.corrThreshold = parseFloat(document.getElementById('setCorrThreshold').value) || 0.75;
+    localStorage.setItem(STORAGE_PREFIX + 'params', JSON.stringify(params));
+}
+function toggleSettings() {
+    const panel = document.getElementById('settingsPanel');
+    const arrow = document.getElementById('settingsArrow');
+    panel.classList.toggle('hidden');
+    arrow.textContent = panel.classList.contains('hidden') ? '▶' : '▼';
+}
+
+// ===== 数据加载 =====
+async function loadUnifiedData() {
+    const timestamp = new Date().getTime();
+    const response = await fetch(DATA_FILE + '?t=' + timestamp);
+    if (!response.ok) throw new Error('加载数据失败，请确认 data/prices.json 存在');
+    return await response.json();
+}
+
+// ===== 数据状态管理 =====
+function getDataAsOfDate() { return localStorage.getItem(STORAGE_PREFIX + 'data_as_of_date') || '--'; }
+function setDataAsOfDate(d) { if(d) localStorage.setItem(STORAGE_PREFIX + 'data_as_of_date', d); }
+function updateDataStatus() { document.getElementById('dataAsOfDate').textContent = getDataAsOfDate(); }
+
+function loadPriceHistory() { return JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'core_prices') || '{}'); }
+function savePriceHistory(h) { localStorage.setItem(STORAGE_PREFIX + 'core_prices', JSON.stringify(h)); }
+function getPriceArray(history, code) { return (history[code] || []).slice(-60); }
+function addTodayPrice(code, price) {
+    const history = loadPriceHistory();
+    if (!history[code]) history[code] = [];
+    history[code].push(price);
+    // ✅ 修复：保留至少61个价格点，确保60日R²可计算
+    if (history[code].length > 61) history[code] = history[code].slice(-61);
+    savePriceHistory(history);
+}
+
+// ===== 初始化 =====
+async function initApp() {
+    loadParams();
+    try {
+        const unified = await loadUnifiedData();
+        const allPrices = unified.prices;
+        const allDates = unified.dates;
+        const myPrices = {};
+        etfData.forEach(etf => {
+            if (allPrices[etf.code]) myPrices[etf.code] = [...allPrices[etf.code]];
+            else console.warn('⚠️ 缺少数据:', etf.code);
+        });
+        if (!localStorage.getItem(STORAGE_PREFIX + 'core_prices') || Object.keys(JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'core_prices'))).length === 0) {
+            localStorage.setItem(STORAGE_PREFIX + 'core_prices', JSON.stringify(myPrices));
+            setDataAsOfDate(allDates[allDates.length-1].slice(5));
+        }
+        updateDataWarning(myPrices);
+        await generateInitialHistory(myPrices, allDates);
+    } catch(e) {
+        alert('⚠️ 加载数据失败！请确认 data/prices.json 文件存在，且通过HTTP服务器访问（不要直接双击HTML）。\n错误信息: ' + e.message);
+        console.error(e);
+    }
+    updateDataStatus();
+    renderEtfList();
+    drawTrendChart();
+}
+
+// ===== 数据充足性提醒 =====
+function updateDataWarning(pricesDict) {
+    const warningDiv = document.getElementById('dataWarning');
+    const minCount = Math.min(...etfData.map(etf => (pricesDict[etf.code] || []).length));
+    const maxCount = Math.max(...etfData.map(etf => (pricesDict[etf.code] || []).length));
+    
+    if (maxCount < 61) {
+        warningDiv.classList.remove('hidden');
+        warningDiv.innerHTML = `⚠️ <strong>数据不足61个交易日</strong>（当前 ${maxCount} 天）<br>长期R²(60日)无法计算，将退化为仅使用短期R²(20日)。<br>建议补充历史数据至61天以上，以获得更稳健的趋势过滤。`;
+    } else if (minCount < 61) {
+        warningDiv.classList.remove('hidden');
+        warningDiv.innerHTML = `⚠️ <strong>部分ETF数据不足61个交易日</strong>（最少 ${minCount} 天）<br>数据不足的ETF将仅使用短期R²(20日)，其余ETF正常使用20日+60日加权R²。`;
+    } else {
+        warningDiv.classList.add('hidden');
+    }
+}
+
+// ===== 核心算法（修复版） =====
+
+// 线性回归 R²（累计收益 vs 时间）
+function calcTrueRSquared(prices) {
+    if (!prices || prices.length < 2) return { r2: 0, slope: 0 };
+    const n = prices.length;
+    const returns = [];
+    for (let i = 1; i < n; i++) {
+        if (prices[i-1] <= 0) return { r2: 0, slope: 0 };
+        returns.push((prices[i] - prices[i-1]) / prices[i-1]);
+    }
+    if (returns.length === 0) return { r2: 0, slope: 0 };
+    let cum = 1;
+    const cumSeries = [cum];
+    for (const r of returns) cumSeries.push(cum *= (1 + r));
+    const x = Array.from({length: n}, (_, i) => i);
+    const y = cumSeries;
+    const xMean = x.reduce((s,v) => s+v,0)/n, yMean = y.reduce((s,v) => s+v,0)/n;
+    let SS_xy=0, SS_xx=0, SS_yy=0;
+    for (let i=0;i<n;i++){
+        SS_xy += (x[i]-xMean)*(y[i]-yMean);
+        SS_xx += (x[i]-xMean)**2;
+        SS_yy += (y[i]-yMean)**2;
+    }
+    if (SS_xx===0 || SS_yy===0) return {r2:0, slope:0};
+    const slope = SS_xy/SS_xx;
+    const intercept = yMean - slope*xMean;
+    const yPred = x.map(xi => intercept+slope*xi);
+    let SS_res = 0;
+    for (let i=0;i<n;i++) SS_res += (y[i]-yPred[i])**2;
+    const r2 = Math.max(0, Math.min(1, 1 - SS_res/SS_yy));
+    return { r2, slope };
+}
+
+// 加权 R²（短期20日 + 长期60日）
+function calcWeightedRSquared(prices, weightShort) {
+    const len = prices.length;
+    
+    if (len < 21) {
+        return { r2: 0, r2Label: '数据不足' };
+    }
+    
+    const r2_short = calcTrueRSquared(prices.slice(-21)).r2;
+    
+    if (len < 61) {
+        const actualDays = len - 1;
+        return { r2: r2_short, r2Label: `仅${actualDays}日` };
+    }
+    
+    const r2_60 = calcTrueRSquared(prices.slice(-61)).r2;
+    const r2 = r2_short * weightShort + r2_60 * (1 - weightShort);
+    return { r2, r2Label: '20+60日' };
+}
+
+// 年化波动率（小数形式）
+function calcAnnualVolatility(prices, priceCount, annualFactor = 252) {
+    if (!prices || prices.length < priceCount) return 0;
+    const recent = prices.slice(-priceCount);
+    const returns = [];
+    for (let i = 1; i < recent.length; i++) {
+        if (recent[i-1] <= 0) return 0;
+        returns.push(Math.log(recent[i] / recent[i-1]));
+    }
+    if (returns.length < 2) return 0;
+    const mean = returns.reduce((s,r) => s+r,0) / returns.length;
+    const variance = returns.reduce((s,r) => s + (r-mean)**2, 0) / (returns.length-1);
+    return Math.sqrt(variance) * Math.sqrt(annualFactor);
+}
+
+// 区间收益率（百分比）
+function getReturn(prices, lookback) {
+    if (prices.length < lookback + 1) return 0;
+    const start = prices[prices.length - lookback - 1];
+    const end = prices[prices.length - 1];
+    if (start <= 0) return 0;
+    return ((end - start) / start) * 100;
+}
+
+// 皮尔逊相关系数（修复：标准差为0时返回0）
+function pearsonCorrelation(x, y) {
+    if (x.length !== y.length || x.length < 2) return 0;
+    const n = x.length;
+    const xMean = x.reduce((s,v)=>s+v,0)/n;
+    const yMean = y.reduce((s,v)=>s+v,0)/n;
+    let num=0, denX=0, denY=0;
+    for (let i=0;i<n;i++) {
+        num += (x[i]-xMean)*(y[i]-yMean);
+        denX += (x[i]-xMean)**2;
+        denY += (y[i]-yMean)**2;
+    }
+    if (denX===0 || denY===0) return 0; // 修复：无波动视为不相关
+    return num / Math.sqrt(denX*denY);
+}
+
+// 从价格序列获取日收益率
+function getReturns(prices) {
+    if (!prices || prices.length < 2) return [];
+    const rets = [];
+    for (let i=1;i<prices.length;i++) {
+        if (prices[i-1] <= 0) return [];
+        rets.push((prices[i]-prices[i-1])/prices[i-1]);
+    }
+    return rets;
+}
+
+// 计算两个ETF的收益率相关系数（修复：增加长度校验）
+function calcCorrelation(pricesA, pricesB) {
+    if (!pricesA || !pricesB) return { corr: 0, corrDays: 0 };
+    
+    if (pricesA.length !== pricesB.length) {
+        console.warn('⚠️ 价格数组长度不一致，相关系数可能失真', 
+            'A:', pricesA.length, 'B:', pricesB.length);
+    }
+    
+    const retsA = getReturns(pricesA).slice(-60);
+    const retsB = getReturns(pricesB).slice(-60);
+    const len = Math.min(retsA.length, retsB.length);
+    if (len < 2) return { corr: 0, corrDays: 0 };
+    const corr = pearsonCorrelation(retsA.slice(-len), retsB.slice(-len));
+    return { corr, corrDays: len };
+}
+
+// 计算动量评分（修复：etfData 作为参数传入）
+function computeRankings(pricesDict, etfList, cfg) {
+    const { volWindow, minR2, weightShort, annualFactor } = cfg;
+    const momentumWindow = 10;
+    const results = etfList.map(etf => {
+        const prices = pricesDict[etf.code] || [];
+        if (prices.length < momentumWindow + 1) {
+            return { ...etf, score: 0, rSquared: null, r2Label: '数据不足', m10:0, m60:0, vol:0 };
+        }
+        const m10 = getReturn(prices, momentumWindow);
+        const m60 = getReturn(prices, Math.min(60, prices.length-1));
+        const vol = calcAnnualVolatility(prices, volWindow, annualFactor);
+        const gainWindow = m10 / 100;
+        let score = 0, r2 = 0, r2Label = '';
+        if (gainWindow > 0) {
+            const r2Result = calcWeightedRSquared(prices, weightShort);
+            r2 = r2Result.r2;
+            r2Label = r2Result.r2Label;
+            if (r2 >= minR2) {
+                const annualizedReturn = Math.log(1 + gainWindow) * (annualFactor / momentumWindow);
+                const volCapped = Math.max(vol, 0.015);
+                score = (annualizedReturn / volCapped) * r2;
+                score = Math.max(0, score);
+            }
+        }
+        return { ...etf, score, rSquared: r2, r2Label, m10, m60, vol };
+    });
+    results.sort((a,b) => b.score - a.score);
+    return results;
+}
+
+// 相关性约束选择（修复：循环检查，逐个验证）
+function selectByCorrelation(candidates, pricesDict, corrThreshold, maxSelect = 2) {
+    const selected = [];
+    const skipLog = [];
+    
+    for (const candidate of candidates) {
+        if (selected.length >= maxSelect) break;
+        let tooCorrelated = false;
+        
+        for (const sel of selected) {
+            const { corr, corrDays } = calcCorrelation(
+                pricesDict[candidate.code],
+                pricesDict[sel.code]
+            );
+            if (corr > corrThreshold) {
+                tooCorrelated = true;
+                skipLog.push(`跳过${candidate.name}（与${sel.name}相关系数${corr.toFixed(2)}(${corrDays}日)）`);
+                break;
+            }
+        }
+        
+        if (!tooCorrelated) {
+            selected.push(candidate);
+        }
+    }
+    
+    return { selected, skipReason: skipLog.join('；') };
+}
+
+// 风险平价权重（波动率倒数加权，下限1.5%）
+function calcRiskParityWeights(selectedETFs) {
+    const minVol = 0.015;
+    if (selectedETFs.length === 0) return [];
+    if (selectedETFs.length === 1) return [0.5]; // 单只持有50%仓位
+    
+    const vols = selectedETFs.map(e => Math.max(e.vol, minVol));
+    const invVols = vols.map(v => 1 / v);
+    const total = invVols.reduce((a, b) => a + b, 0);
+    return invVols.map(iv => iv / total);
+}
+
+// ===== 生成初始历史排名 =====
+async function generateInitialHistory(pricesDict, dates) {
+    const cfg = { volWindow: params.volWindow, annualFactor: 252, minR2: params.minR2, weightShort: params.r2WeightShort };
+    const totalDays = dates.length;
+    const startIndex = 10;
+    const snapshots = [];
+    for (let i = startIndex; i < totalDays; i++) {
+        const slicedPrices = {};
+        for (let code in pricesDict) slicedPrices[code] = pricesDict[code].slice(0, i + 1);
+        const rankings = computeRankings(slicedPrices, etfData, cfg);
+        snapshots.push({
+            time: dates[i].slice(5),
+            rankings: rankings.map((r, idx) => ({ rank: idx + 1, name: r.name, code: r.code, score: r.score, r2: r.rSquared, r2Label: r.r2Label, vol: r.vol }))
+        });
+    }
+    snapshots.sort((a,b) => a.time.localeCompare(b.time));
+    localStorage.setItem(STORAGE_PREFIX + 'rank_history', JSON.stringify(snapshots.slice(-60)));
+}
+
+// ===== 保存排名历史 =====
+function saveRankHistory(rankings) {
+    const history = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'rank_history') || '[]');
+    const dateInput = document.getElementById('recordDate');
+    let dateStr = dateInput.value;
+    if (!dateStr) { const d = new Date(); dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    const displayDate = dateStr.slice(5);
+    const existing = history.find(item => item.time === displayDate);
+    if (existing) {
+        existing.rankings = rankings.map((r, idx) => ({ rank: idx + 1, name: r.name, code: r.code, score: r.score, r2: r.rSquared, r2Label: r.r2Label, vol: r.vol }));
+    } else {
+        history.push({ time: displayDate, rankings: rankings.map((r, idx) => ({ rank: idx + 1, name: r.name, code: r.code, score: r.score, r2: r.rSquared, r2Label: r.r2Label, vol: r.vol })) });
+    }
+    history.sort((a,b) => a.time.localeCompare(b.time));
+    if (history.length > 60) history.splice(0, history.length - 60);
+    localStorage.setItem(STORAGE_PREFIX + 'rank_history', JSON.stringify(history));
+}
+
+// ===== UI函数 =====
+function matchETFByName(text) {
+    const clean = text.replace(/ETF/i, '').replace(/[（）()]/g, '').trim();
+    for (const etf of etfData) {
+        const etfClean = etf.name.replace(/ETF/i, '').replace(/[（）()]/g, '').trim();
+        if (clean.includes(etfClean) || etfClean.includes(clean)) return etf;
+    }
+    return null;
+}
+
+function batchAddPrices() {
+    const raw = document.getElementById('batchInput').value.trim();
+    const errorDiv = document.getElementById('batchError');
+    errorDiv.innerHTML = '';
+    if (!raw) { errorDiv.innerHTML = '请粘贴数据'; return; }
+    const dateInput = document.getElementById('recordDate');
+    let dateStr = dateInput.value;
+    if (!dateStr) { const d = new Date(); dateStr = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+    const displayDate = dateStr.slice(5);
+    const lines = raw.split('\n').filter(l => l.trim());
+    let added = 0, errors = [], warnings = [];
+    for (const line of lines) {
+        if (/名称|代码|最新价|日期|价格/i.test(line) && !/\d{6}/.test(line)) continue;
+        const parts = line.split(/[,，\t]+/).map(s => s.trim());
+        if (parts.length < 2) { errors.push(`格式错误: "${line}"`); continue; }
+        let code = null, price = null;
+        for (const p of parts) if (/^\d{6}$/.test(p)) { code = p; break; }
+        if (!code) {
+            for (const p of parts) if (!/^\d+/.test(p)) {
+                const matched = matchETFByName(p);
+                if (matched) { code = matched.code; warnings.push(`已将 "${p}" 识别为 ${matched.name}`); break; }
+            }
+        }
+        if (!code) { errors.push(`未识别到ETF: "${line}"`); continue; }
+        for (const p of parts) {
+            const num = parseFloat(p);
+            if (!isNaN(num) && num > 0 && !/^\d{4}\.\d{2}$/.test(p) && !/^\d{6}$/.test(p)) { price = num; break; }
+        }
+        if (price === null || isNaN(price) || price <= 0) { errors.push(`未识别到有效价格: "${line}"`); continue; }
+        const etf = etfData.find(e => e.code === code);
+        if (!etf) { errors.push(`代码${code}不在ETF池中`); continue; }
+        addTodayPrice(code, price);
+        added++;
+    }
+    if (added > 0) { setDataAsOfDate(displayDate); updateDataStatus(); }
+    renderEtfList();
+    document.getElementById('batchInput').value = '';
+    let msg = `✅ 成功添加 ${added} 个价格，数据截至 ${displayDate}`;
+    if (warnings.length) msg += `\n💡 ${warnings.join('\n')}`;
+    if (errors.length) { msg += `\n⚠️ 错误:\n${errors.slice(0,5).join('\n')}`; errorDiv.innerHTML = errors.join('<br>'); }
+    alert(msg);
+    const history = loadPriceHistory();
+    updateDataWarning(history);
+}
+
+function fillTodayExample() {
+    const history = loadPriceHistory();
+    const example = etfData.map(etf => {
+        const prices = getPriceArray(history, etf.code);
+        const last = prices.length > 0 ? prices[prices.length-1] : '?';
+        return `${etf.code},${last}`;
+    }).join('\n');
+    document.getElementById('batchInput').value = example;
+}
+
+function renderEtfList() {
+    const history = loadPriceHistory();
+    document.getElementById('etfList').innerHTML = etfData.map(etf => {
+        const prices = getPriceArray(history, etf.code);
+        const count = prices.length;
+        const lastPrice = count > 0 ? prices[count-1].toFixed(3) : '--';
+        return `<div class="etf-row"><div class="etf-name">${etf.name}<div class="code">${etf.code}</div></div><span class="etf-count">${count}/60天</span><span style="font-weight:700; color:#38bdf8; margin-right:4px;">${lastPrice}</span><button class="btn-small" onclick="deleteLast('${etf.code}')" style="background:#450a0a;">删末</button></div>`;
+    }).join('');
+}
+
+function deleteLast(code) {
+    const history = loadPriceHistory();
+    if (!history[code] || history[code].length === 0) return;
+    history[code].pop();
+    savePriceHistory(history);
+    renderEtfList();
+    updateDataWarning(history);
+}
+
+function clearHistory() {
+    if (!confirm('确定清空所有历史记录？')) return;
+    localStorage.setItem(STORAGE_PREFIX + 'rank_history', JSON.stringify([]));
+    localStorage.removeItem(STORAGE_PREFIX + 'current_holding');
+    document.getElementById('chartCard').style.display = 'none';
+}
+
+// ===== 图表 =====
+const trendCanvas = document.getElementById('trendChart');
+let chartData = null;
+
+function drawChartWithHighlight(highlightIndex = -1) {
+    if (!chartData) return;
+    const { history, etfRanks } = chartData;
+    const canvas = trendCanvas;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const W = rect.width || 400, H = 220;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+    const pad = { top: 10, bottom: 30, left: 35, right: 10 };
+    const chartW = W - pad.left - pad.right, chartH = H - pad.top - pad.bottom;
+    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 0.5;
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let r = 1; r <= 4; r++) {
+        const y = pad.top + ((r - 1) / 3) * chartH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+        ctx.fillText(`第${r}名`, pad.left - 6, y);
+    }
+    const yBottom = pad.top + chartH;
+    ctx.fillStyle = '#64748b'; ctx.font = '8px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('4+ (触底)', pad.left - 6, yBottom + 2);
+
+    etfData.forEach((etf, idx) => {
+        const ranks = etfRanks[etf.code];
+        if (!ranks || ranks.length === 0) return;
+        const color = FIXED_COLORS[idx % FIXED_COLORS.length];
+        ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        ranks.forEach((rank, i) => {
+            const displayRank = Math.min(rank, 4);
+            const x = pad.left + (i / (ranks.length - 1)) * chartW;
+            const y = pad.top + ((displayRank - 1) / 3) * chartH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        ranks.forEach((rank, i) => {
+            const displayRank = Math.min(rank, 4);
+            const x = pad.left + (i / (ranks.length - 1)) * chartW;
+            const y = pad.top + ((displayRank - 1) / 3) * chartH;
+            ctx.fillStyle = color;
+            const radius = (rank <= 4) ? 3 : 2;
+            ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI*2); ctx.fill();
+        });
+    });
+
+    ctx.fillStyle = '#64748b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const step = Math.max(1, Math.floor(history.length / 5));
+    for (let i = 0; i < history.length; i += step) {
+        const x = pad.left + (i / (history.length - 1)) * chartW;
+        ctx.fillText(history[i].time, x, H - 20);
+    }
+
+    if (highlightIndex >= 0 && highlightIndex < history.length) {
+        const x = pad.left + (highlightIndex / (history.length - 1)) * chartW;
+        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke(); ctx.setLineDash([]);
+        const snap = history[highlightIndex];
+        const rankMap = {};
+        snap.rankings.forEach(item => { if (item.rank <= 4) rankMap[item.rank] = item.name; });
+        const tipW = 150, tipH = 20 + 4 * 17;
+        let tipX = x + 10, tipY = pad.top + 5;
+        if (tipX + tipW > W - pad.right) tipX = x - tipW - 10;
+        if (tipY + tipH > H - pad.bottom) tipY = H - pad.bottom - tipH;
+        ctx.fillStyle = 'rgba(11, 15, 25, 0.95)'; ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.roundRect(tipX, tipY, tipW, tipH, 6); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e2e8f0'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        ctx.fillText(`📅 ${snap.time}`, tipX + 6, tipY + 4);
+        ctx.font = '9px sans-serif';
+        for (let rank = 1; rank <= 4; rank++) {
+            if (rankMap[rank]) {
+                const etfObj = etfData.find(e => e.name === rankMap[rank]);
+                let color = '#e2e8f0';
+                if (etfObj) { const idx = etfData.indexOf(etfObj); color = FIXED_COLORS[idx % FIXED_COLORS.length]; }
+                ctx.fillStyle = color;
+                ctx.fillText(`${rank}名 ${rankMap[rank]}`, tipX + 6, tipY + 22 + (rank-1)*17);
+            } else {
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(`${rank}名 — 无`, tipX + 6, tipY + 22 + (rank-1)*17);
+            }
+        }
+    }
+}
+
+function getCanvasCoords(e) {
+    const rect = trendCanvas.getBoundingClientRect();
+    let clientX;
+    if (e.touches) { clientX = e.touches[0].clientX; e.preventDefault(); }
+    else { clientX = e.clientX; }
+    return { x: clientX - rect.left };
+}
+function handlePointerMove(e) {
+    if (!chartData) return;
+    const { x } = getCanvasCoords(e);
+    const pad = { left: 35, right: 10 };
+    const rect = trendCanvas.getBoundingClientRect();
+    const W = rect.width, chartW = W - pad.left - pad.right;
+    if (x < pad.left || x > W - pad.right) { drawChartWithHighlight(-1); return; }
+    const { history } = chartData;
+    const rawIndex = (x - pad.left) / chartW;
+    const index = Math.round(rawIndex * (history.length - 1));
+    drawChartWithHighlight(Math.max(0, Math.min(history.length - 1, index)));
+}
+function handlePointerLeave() { drawChartWithHighlight(-1); }
+
+trendCanvas.addEventListener('mousemove', handlePointerMove);
+trendCanvas.addEventListener('mouseleave', handlePointerLeave);
+trendCanvas.addEventListener('touchstart', handlePointerMove, { passive: false });
+trendCanvas.addEventListener('touchmove', handlePointerMove, { passive: false });
+trendCanvas.addEventListener('touchend', handlePointerLeave, { passive: false });
+
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+        if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+        this.beginPath();
+        this.moveTo(x + r.tl, y); this.lineTo(x + w - r.tr, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+        this.lineTo(x + w, y + h - r.br);
+        this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+        this.lineTo(x + r.bl, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+        this.lineTo(x, y + r.tl);
+        this.quadraticCurveTo(x, y, x + r.tl, y);
+        this.closePath();
+    };
+}
+
+function drawTrendChart() {
+    const history = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'rank_history') || '[]');
+    const card = document.getElementById('chartCard');
+    if (history.length === 0) { card.style.display = 'none'; chartData = null; return; }
+    card.style.display = 'block';
+    const etfRanks = {};
+    etfData.forEach(etf => { etfRanks[etf.code] = []; });
+    history.forEach(snap => {
+        etfData.forEach(etf => {
+            const found = snap.rankings.find(r => r.code === etf.code);
+            etfRanks[etf.code].push(found ? found.rank : 12);
+        });
+    });
+    chartData = { history, etfRanks };
+    drawChartWithHighlight(-1);
+    document.getElementById('chartLegend').innerHTML = etfData.map((etf, idx) => {
+        return `<span><span style="background:${FIXED_COLORS[idx % FIXED_COLORS.length]};width:12px;height:12px;display:inline-block;border-radius:3px;"></span> ${etf.name}</span>`;
+    }).join('');
+}
+
+// ===== 计算排名 =====
+function calcMomentum() {
+    loadUnifiedData().then(unified => {
+        const allPrices = unified.prices;
+        const allDates = unified.dates;
+        const myPrices = {};
+        etfData.forEach(etf => {
+            if (allPrices[etf.code]) myPrices[etf.code] = [...allPrices[etf.code]];
+            else console.warn('⚠️ 缺少数据:', etf.code);
+        });
+        localStorage.setItem(STORAGE_PREFIX + 'core_prices', JSON.stringify(myPrices));
+        setDataAsOfDate(allDates[allDates.length-1].slice(5));
+        updateDataStatus();
+        updateDataWarning(myPrices);
+        
+        const cfg = { volWindow: params.volWindow, annualFactor: 252, minR2: params.minR2, weightShort: params.r2WeightShort, corrThreshold: params.corrThreshold };
+        const results = computeRankings(myPrices, etfData, cfg);
+        saveRankHistory(results);
+        
+        const candidates = results.filter(r => r.score > 0);
+        const { selected, skipReason } = selectByCorrelation(candidates, myPrices, cfg.corrThreshold);
+        
+        const weights = calcRiskParityWeights(selected);
+
+        document.getElementById('rankList').innerHTML = results.map((r,i)=>{
+            const rankClass = i===0?'rank-1':(i===1?'rank-2':(i===2?'rank-3':(i===3?'rank-4':'rank-5')));
+            const isSelected = selected.some(s=>s.code===r.code) && r.score>0;
+            let r2Str = '';
+            if (r.rSquared === null || r.rSquared === undefined) { 
+                r2Str = ' R²:数据不足'; 
+            } else {
+                const isFull = r.r2Label === '20+60日';
+                const tagClass = isFull ? 'full' : 'partial';
+                r2Str = ` R²:${r.rSquared.toFixed(2)} <span class="r2-tag ${tagClass}">${r.r2Label}</span>`;
+                if (r.score === 0 && r.rSquared !== null) {
+                    if (r.m10 <= 0) r2Str += ' (收益≤0淘汰)';
+                    else if (r.rSquared < cfg.minR2) r2Str += ` (<${cfg.minR2}淘汰)`;
+                }
+            }
+            const volStr = r.vol > 0 ? ` Vol:${(r.vol*100).toFixed(1)}%` : '';
+            const scoreStr = r.score.toFixed(2);
+            const isSkipped = skipReason.includes(r.name);
+            const skipMark = isSkipped ? ' ⚠️跳过' : '';
+            return `<div class="rank-item" style="${isSelected?'border-color:#059669;background:#064e3b20;':''}${isSkipped?'opacity:0.5;':''}">
+                <div class="rank-num ${rankClass}">${i+1}</div>
+                <div class="rank-info">${r.name}<div class="code">${r.code}${r2Str}${volStr}</div></div>
+                <div class="rank-val">${scoreStr}${skipMark}</div>
+            </div>`;
+        }).join('');
+
+        const advice = document.getElementById('tradeAdvice');
+        if (selected.length === 2) {
+            advice.innerHTML = `✅ 推荐持仓（风险平价）<br>① ${selected[0].name} — ${(weights[0]*100).toFixed(1)}%<br>② ${selected[1].name} — ${(weights[1]*100).toFixed(1)}%<br>${skipReason ? '⚠️ ' + skipReason : ''}`;
+        } else if (selected.length === 1) {
+            advice.innerHTML = `⚠️ 仅一只合格：${selected[0].name} — 50%仓位<br>${skipReason ? '⚠️ ' + skipReason : ''}`;
+        } else {
+            advice.innerHTML = `❌ 无合格ETF（10日收益≤0 或 R²<${cfg.minR2}）<br>建议空仓`;
+        }
+        document.getElementById('tradeLog').innerHTML = `📊 当前最优：${results[0].name}（得分 ${results[0].score.toFixed(2)}）`;
+        document.getElementById('momentumResult').style.display='block';
+        drawTrendChart();
+    }).catch(e => {
+        alert('加载数据失败: ' + e.message);
+        console.error(e);
+    });
+}
+
+// ===== 启动 =====
+initApp();
+</script>
+</body>
+</html>

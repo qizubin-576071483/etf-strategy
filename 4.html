@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>纯趋势动量 · 排名轨迹 · 带交互</title>
+    <link rel="stylesheet" href="shared/styles.css">
+</head>
+<body>
+<div class="header">
+    <h1>📈 纯趋势动量 · 排名轨迹</h1>
+    <div class="date" id="currentDate">--</div>
+</div>
+<div class="container">
+    <div class="settings-toggle" onclick="toggleSettings()">
+        <span style="font-size:13px;font-weight:600;">⚙️ 参数设置</span>
+        <span id="settingsArrow">▶</span>
+    </div>
+    <div id="settingsPanel" class="settings-panel hidden">
+        <div class="input-row">
+            <div class="input-group">
+                <label>回看天数</label>
+                <input type="number" id="setWindowDays" value="25" min="5" max="250">
+            </div>
+            <div class="input-group">
+                <label>年化天数</label>
+                <input type="number" id="setAnnualDays" value="250" min="100" max="500">
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+            <button class="btn-small" onclick="saveParams()">💾 保存参数</button>
+            <button class="btn-small" onclick="clearHistory()">🗑️ 清空历史</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><div class="icon bg-green">🏆</div>最新排名</div>
+        <div class="data-status"><span class="label">数据截至</span><span id="dataAsOfDate">--</span></div>
+        <div id="rankList"></div>
+        <div id="tradeAdvice" style="font-size:13px;line-height:1.8;margin-top:12px;padding:12px;background:#0f172a;border-radius:10px;border:1px solid #334155;"></div>
+        <button class="btn" onclick="calcMomentum()">🔄 刷新数据</button>
+    </div>
+
+    <div class="card" id="historyCard">
+        <div class="card-title"><div class="icon" style="background:#6366f120;color:#818cf8;">📋</div>历史得分</div>
+        <div class="history-table" id="historyTable"></div>
+    </div>
+
+    <div class="card" id="chartCard">
+        <div class="card-title"><div class="icon" style="background:#0ea5e920;color:#38bdf8;">📊</div>排名轨迹</div>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+            <div class="chart-sub">← 左右滑动查看历史 →</div>
+            <div class="chart-legend" id="chartLegend"></div>
+        </div>
+    </div>
+
+    <div class="card" id="momentumCard">
+        <div class="card-title">
+            <div class="icon" style="background:#f59e0b20;color:#fbbf24;">⚡</div>
+            <span>核心ETF 25日动量走势</span>
+            <span style="font-size:12px;color:#94a3b8;margin-left:8px;">动量 > 0 视为多头强势区</span>
+        </div>
+        <div class="time-filter">
+            <button class="time-btn" data-range="week">近一周</button>
+            <button class="time-btn" data-range="month">本月</button>
+            <button class="time-btn active" data-range="all">全部</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="momentumChart"></canvas>
+            <div class="chart-legend" id="momentumLegend"></div>
+        </div>
+    </div>
+
+    <div class="tip">💡 得分 = 年化收益率 × R²，综合衡量涨势强度与稳定性。永远满仓得分第一的ETF。</div>
+</div>
+<script>const CURRENT_PAGE = '4';</script>
+<script src="config.js"></script>
+<script src="shared/engine.js"></script>
+<script src="shared/ui.js"></script>
+<script src="shared/app.js"></script>
+</body>
+</html>
