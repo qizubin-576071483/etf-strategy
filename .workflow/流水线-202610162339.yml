@@ -12,10 +12,11 @@ stages:
   - name: update-stage
     displayName: 更新价格
     steps:
-      - step: shell@default
-        name: shell-build
-        displayName: Shell 构建
+      - step: build@python
+        name: python-build
+        displayName: Python 构建
         inputs:
+          pythonVersion: "3.10"
           commands:
             - python3 --version
             - pip3 install requests || pip install requests
