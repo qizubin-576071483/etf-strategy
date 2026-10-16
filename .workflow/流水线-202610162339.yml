@@ -1,27 +1,29 @@
 version: "1.0"
 name: etf-daily-update
-displayName: ETF 价格每日更新
+displayName: ETF-价格每日更新
+
 triggers:
-  schedule:
+  cron:
     - cron: "0 21 * * 1-5"
       branches:
         - main
+
 stages:
   - stage:
       name: update-stage
       displayName: 更新价格
       steps:
-        - step: build@python
+        - step: python@latest
           name: python-build
           displayName: Python 构建
           inputs:
             pythonVersion: "3.10"
-          commands:
-            - pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-            - pip install requests
-            - python fetch_prices.py
-            - git config --global user.email "action@gitee.com"
-            - git config --global user.name "Gitee Go"
-            - git add data/prices.json data/rank_history.json
-            - git commit -m "Auto update prices" || echo "No changes"
-            - git push
+            commands:
+              - pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+              - pip install requests
+              - python fetch_prices.py
+              - git config --global user.email "action@gitee.com"
+              - git config --global user.name "Gitee Go"
+              - git add data/prices.json data/rank_history.json
+              - git commit -m "Auto update prices" || echo "No changes"
+              - git push
