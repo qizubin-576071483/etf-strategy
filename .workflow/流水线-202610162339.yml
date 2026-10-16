@@ -25,4 +25,4 @@ stages:
             - git config --global user.name "Gitee Go"
             - git add data/prices.json data/rank_history.json
             - git commit -m "Auto update prices" || echo "No changes"
-            - git push
+            - git push origin HEAD:main
