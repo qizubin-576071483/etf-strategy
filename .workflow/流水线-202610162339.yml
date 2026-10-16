@@ -12,7 +12,7 @@ stages:
   - name: update-stage
     displayName: 更新价格
     steps:
-      - step: python@latest
+      - step: build@python
         name: python-build
         displayName: Python 构建
         inputs:
