@@ -22,8 +22,8 @@ stages:
             - pip install requests
             - git config --global user.email "action@gitee.com"
             - git config --global user.name "Gitee Go"
-            - git checkout main
+            - git config --global push.default current
             - python fetch_prices.py
             - git add data/prices.json data/rank_history.json
             - git commit -m "Auto update prices" || echo "No changes"
-            - git push origin main
+            - git push origin HEAD:main
