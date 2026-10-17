@@ -31,6 +31,6 @@ stages:
             - git add data/prices.json data/rank_history.json dist/data/prices.json dist/data/rank_history.json
             - git commit -m "Auto update prices" || echo "No changes"
             - git push origin HEAD:main
-            - git remote add github https://github.com/qizubin-576071483/etf-strategy.git || git remote set-url github https://github.com/qizubin-576071483/etf-strategy.git
+            - git remote set-url github https://qizubin-576071483:${GITHUB_TOKEN}@github.com/qizubin-576071483/etf-strategy.git
             - git push github HEAD:main
             - python3 deploy_netlify.py
