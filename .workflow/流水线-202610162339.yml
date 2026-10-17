@@ -21,8 +21,11 @@ stages:
             - python3 --version
             - pip3 install requests || pip install requests
             - python3 fetch_prices.py
+            - cp data/prices.json dist/data/prices.json
+            - cp data/rank_history.json dist/data/rank_history.json
             - git config --global user.email "action@gitee.com"
             - git config --global user.name "Gitee Go"
-            - git add data/prices.json data/rank_history.json
+            - git add data/prices.json data/rank_history.json dist/data/prices.json dist/data/rank_history.json
             - git commit -m "Auto update prices" || echo "No changes"
             - git push origin HEAD:main
+            - python3 deploy_netlify.py
