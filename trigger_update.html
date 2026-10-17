@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手动更新价格</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",Roboto,sans-serif;
+            background:#0b0f19;color:#e2e8f0;display:flex;justify-content:center;align-items:center;
+            min-height:100vh;flex-direction:column;padding:20px;
+        }
+        .container{
+            background:#1e293b;border-radius:24px;padding:36px 28px;
+            max-width:420px;width:100%;text-align:center;
+            border:1px solid #334155;box-shadow:0 8px 30px rgba(0,0,0,0.5);
+        }
+        h1{font-size:23px;margin-bottom:10px;}
+        .sub{color:#94a3b8;font-size:14px;margin-bottom:24px;line-height:1.6;}
+        .btn{
+            display:block;width:100%;padding:16px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+            border:none;border-radius:16px;color:#fff;font-size:18px;font-weight:700;
+            cursor:pointer;transition:0.2s;letter-spacing:1px;text-decoration:none;
+        }
+        .btn:active{transform:scale(0.98);opacity:0.85;}
+        .btn.secondary{background:#0f172a;border:1px solid #334155;color:#7dd3fc;font-size:15px;margin-top:10px;}
+        .info{
+            margin-top:22px;padding:16px;background:#0f172a;border-radius:12px;
+            font-size:13px;color:#94a3b8;text-align:left;line-height:1.75;
+        }
+        .info strong{color:#e2e8f0;}
+        .info ol{margin:8px 0 0 18px;}
+        .info li{margin-bottom:6px;}
+        .status{
+            margin-top:18px;padding:14px;background:#0f172a;border-radius:12px;
+            font-size:13px;line-height:1.7;text-align:left;border:1px solid #334155;
+        }
+        .status .label{color:#64748b;}
+        .status .val{color:#4ade80;font-weight:600;}
+        .footer{color:#64748b;font-size:12px;margin-top:20px;line-height:1.6;}
+        a.back{display:inline-block;margin-top:16px;color:#64748b;font-size:13px;text-decoration:none;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ 更新价格与得分</h1>
+    <div class="sub">本页面是纯静态站点，无法在浏览器里直接改服务器数据。<br>请用下面任一方式触发更新。</div>
+
+    <a class="btn" id="runBtn" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" target="_blank" rel="noopener">🚀 在 GitHub 上一键运行</a>
+    <a class="btn secondary" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" target="_blank" rel="noopener">查看最近一次运行结果</a>
+
+    <div class="info">
+        <strong>方式一：网页点击（推荐，手机也能用）</strong>
+        <ol>
+            <li>点上方按钮，登录 GitHub</li>
+            <li>右上角点 <strong>Run workflow</strong> → 再点绿色 <strong>Run workflow</strong></li>
+            <li>约 1 分钟后刷新策略页即可看到新数据</li>
+        </ol>
+    </div>
+
+    <div class="info">
+        <strong>方式二：电脑本地双击（最快，不走排队）</strong>
+        <ol>
+            <li>双击项目目录里的 <strong>手动更新价格.bat</strong></li>
+            <li>脚本会抓最新价、重算全部得分并直接推上线</li>
+            <li>十几秒完成，无需等待云端构建</li>
+        </ol>
+    </div>
+
+    <div class="status">
+        <span class="label">自动更新：</span><span class="val">每个交易日 21:00（北京时间）自动运行</span><br>
+        <span class="label">费用：</span><span class="val">GitHub Pages + Actions，公开仓库完全免费，无次数限制</span>
+    </div>
+
+    <div class="footer">周末与节假日休市，脚本会自动跳过，不会产生重复数据。</div>
+    <a class="back" href="index.html">← 返回首页</a>
+</div>
+
+<script>
+// 展示线上数据的最后更新时间，帮助判断是否需要手动更新
+(async function () {
+    try {
+        const r = await fetch('data/prices.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) return;
+        const d = await r.json();
+        const meta = d.meta || {};
+        const dates = d.dates || [];
+        const last = dates[dates.length - 1];
+        const box = document.querySelector('.status');
+        const line = document.createElement('div');
+        line.style.marginTop = '8px';
+        line.innerHTML = '<span class="label">线上数据截至：</span><span class="val">' +
+            (meta.lastUpdated || last || '未知') +
+            (meta.lastUpdatedTime ? ' ' + meta.lastUpdatedTime : '') + '</span>';
+        box.appendChild(line);
+    } catch (e) { /* 取数失败时静默，不影响页面说明 */ }
+})();
+</script>
+</body>
+</html>
