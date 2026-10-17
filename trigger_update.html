@@ -47,8 +47,10 @@
     <h1>⚡ 更新价格与得分</h1>
     <div class="sub">本页面是纯静态站点，无法在浏览器里直接改服务器数据。<br>请用下面任一方式触发更新。</div>
 
-    <a class="btn" id="runBtn" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" target="_blank" rel="noopener">🚀 在 GitHub 上一键运行</a>
-    <a class="btn secondary" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" target="_blank" rel="noopener">查看最近一次运行结果</a>
+    <a class="btn" id="runBtn" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" onclick="return goRun(event)">🚀 在 GitHub 上一键运行</a>
+    <a class="btn secondary" href="https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml" onclick="return goRun(event)">查看最近一次运行结果</a>
+    <a class="btn secondary" href="javascript:void(0)" onclick="copyLink()">📋 复制任务链接（按钮打不开时用）</a>
+    <div id="copyTip" style="margin-top:8px;font-size:12px;color:#4ade80;min-height:16px;"></div>
 
     <div class="info">
         <strong>方式一：网页点击（推荐，手机也能用）</strong>
@@ -78,6 +80,37 @@
 </div>
 
 <script>
+const WORKFLOW_URL = 'https://github.com/qizubin-576071483/etf-strategy/actions/workflows/update-prices.yml';
+
+// App 内置浏览器常拦截 target=_blank 的新标签，改为当前页直接跳转
+function goRun(e) {
+    e.preventDefault();
+    window.location.href = WORKFLOW_URL;
+    return false;
+}
+
+// 兜底：把链接复制到剪贴板，用户可自行粘贴到系统浏览器打开
+function copyLink() {
+    const tip = document.getElementById('copyTip');
+    const done = function () { tip.textContent = '链接已复制，可粘贴到系统浏览器打开'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(WORKFLOW_URL).then(done, function () { fallbackCopy(); });
+    } else {
+        fallbackCopy();
+    }
+    function fallbackCopy() {
+        const ta = document.createElement('textarea');
+        ta.value = WORKFLOW_URL;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch (err) { tip.textContent = '复制失败，请长按按钮手动复制链接'; }
+        document.body.removeChild(ta);
+    }
+}
+
 // 展示线上数据的最后更新时间，帮助判断是否需要手动更新
 (async function () {
     try {
