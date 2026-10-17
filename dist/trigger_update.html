@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>手动更新价格</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",Roboto,sans-serif;
+            background:#0b0f19;color:#e2e8f0;display:flex;justify-content:center;align-items:center;
+            min-height:100vh;flex-direction:column;
+        }
+        .container{
+            background:#1e293b;border-radius:24px;padding:40px 30px;
+            max-width:400px;width:90%;text-align:center;
+            border:1px solid #334155;box-shadow:0 8px 30px rgba(0,0,0,0.5);
+        }
+        h1{font-size:24px;margin-bottom:10px;}
+        .sub{color:#94a3b8;font-size:14px;margin-bottom:30px;line-height:1.6;}
+        .btn{
+            width:100%;padding:18px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+            border:none;border-radius:16px;color:#fff;font-size:18px;font-weight:700;
+            cursor:pointer;transition:0.2s;letter-spacing:1px;text-decoration:none;
+            display:inline-block;margin-bottom:15px;
+        }
+        .btn:active{transform:scale(0.96);opacity:0.8;}
+        .btn-secondary{
+            background:linear-gradient(135deg,#475569,#334155);
+            font-size:16px;
+        }
+        .info{
+            margin-top:20px;padding:15px;background:#0f172a;border-radius:12px;
+            font-size:13px;color:#94a3b8;text-align:left;line-height:1.6;
+        }
+        .info strong{color:#e2e8f0;}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>⚡ 手动更新价格</h1>
+    <div class="sub">点击按钮前往 Gitee 触发流水线</div>
+    
+    <a href="https://gitee.com/qi-zubin/etf-strategy/pipelines/new" target="_blank" class="btn">
+        🚀 前往 Gitee 执行更新
+    </a>
+    
+    <a href="https://gitee.com/qi-zubin/etf-strategy/pipelines" target="_blank" class="btn btn-secondary">
+        📋 查看更新历史
+    </a>
+    
+    <div class="info">
+        <strong>操作步骤：</strong><br>
+        1. 点击上面按钮打开 Gitee<br>
+        2. 点击"执行"按钮<br>
+        3. 等待流水线完成（约1-2分钟）<br>
+        4. 刷新本页面查看最新数据
+    </div>
+</div>
+</body>
+</html>
