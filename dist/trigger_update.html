@@ -82,8 +82,8 @@ async function runUpdate() {
             status.innerHTML = `<span class="ok">✅ ${data.message}<br>流水线 ID: ${data.pipelineId}</span>`;
         } else {
             btn.className = 'btn error';
-            btn.textContent = ' 更新失败';
-            status.innerHTML = `<span class="fail">❌ ${data.error || '未知错误'}</span>`;
+            btn.textContent = '❌ 更新失败';
+            status.innerHTML = `<span class="fail">❌ ${data.error || '未知错误'}<br><small>${data.details || ''}</small></span>`;
         }
     } catch(e) {
         btn.className = 'btn error';
