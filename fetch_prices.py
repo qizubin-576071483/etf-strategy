@@ -107,6 +107,8 @@ def save_to_json(prices):
     # 保存
     data['meta']['lastUpdated'] = today
     data['meta']['lastUpdatedTime'] = datetime.now().strftime('%H:%M')
+    if data['dates']:
+        data['meta']['description'] = f"{len(ETF_CODES)}只ETF历史数据（{data['dates'][0]} 至 {data['dates'][-1]}）"
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     

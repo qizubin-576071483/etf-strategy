@@ -15,22 +15,6 @@ const PAGE_CONFIGS = {
         hasHistoryTable: true,
         defaultWindowDays: 25
     },
-    '4ceshi': {
-        title: '纯趋势动量 · 排名轨迹 · 带交互',
-        headerTitle: '📈 纯趋势动量 · 排名轨迹',
-        storagePrefix: 'etf_simple_trend_',
-        etfData: [
-            { name: '沪深300ETF', code: '510300' },
-            { name: '创业板ETF', code: '159915' },
-            { name: '国泰纳指ETF', code: '513100' },
-            { name: '华安黄金ETF', code: '518880' }
-        ],
-        fixedColors: ['#38bdf8', '#f87171', '#4ade80', '#fbbf24'],
-        defaultParams: { windowDays: 25, annualDays: 250 },
-        displayMax: 4,
-        hasHistoryTable: false,
-        defaultWindowDays: 25
-    },
     '5': {
         title: '纯趋势动量 · 5只多资产 · 排名轨迹 · 带交互',
         headerTitle: '📈 纯趋势动量 · 5只多资产 · 排名轨迹',
