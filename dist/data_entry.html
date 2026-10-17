@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>统一数据录入 · ETF轮动</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",Roboto,sans-serif;background:#0b0f19;color:#e2e8f0;padding-bottom:40px;}
+        .header{background:linear-gradient(135deg,#0ea5e9,#6366f1);padding:20px;text-align:center;}
+        .header h1{font-size:20px;font-weight:700;letter-spacing:1px;}
+        .header .sub{font-size:13px;opacity:0.8;margin-top:4px;}
+        .container{padding:16px;max-width:700px;margin:0 auto;}
+        .card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155;}
+        .card-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+        .tip{font-size:12px;color:#94a3b8;background:#0f172a;padding:10px;border-radius:8px;margin-bottom:12px;line-height:1.8;}
+        .tip strong{color:#e2e8f0;}
+        .tip .highlight{color:#4ade80;}
+        .etf-input-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b;flex-wrap:wrap;}
+        .etf-input-row:last-child{border-bottom:none;}
+        .etf-input-row .name{flex:1;min-width:80px;font-size:13px;}
+        .etf-input-row .name .code{font-size:11px;color:#64748b;}
+        .etf-input-row .latest{font-size:11px;color:#4ade80;min-width:50px;}
+        .etf-input-row input{width:100px;padding:5px 8px;background:#0f172a;border:1px solid #475569;border-radius:6px;color:#e2e8f0;font-size:14px;text-align:right;outline:none;}
+        .etf-input-row input:focus{border-color:#38bdf8;}
+        .etf-input-row input::placeholder{color:#475569;font-size:11px;}
+        .etf-input-row .matched-badge{font-size:10px;color:#22c55e;background:#22c55e20;padding:2px 8px;border-radius:10px;}
+        .btn{width:100%;padding:14px;background:linear-gradient(135deg,#0ea5e9,#6366f1);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-top:10px;letter-spacing:1px;}
+        .btn:active{transform:scale(0.98);opacity:0.9;}
+        .btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);}
+        .btn-fetch{background:linear-gradient(135deg,#f59e0b,#d97706);}
+        .btn-run{background:linear-gradient(135deg,#8b5cf6,#6d28d9);}
+        .btn-small{padding:6px 14px;font-size:12px;width:auto;background:#334155;border-radius:6px;border:none;color:#e2e8f0;cursor:pointer;}
+        .btn-small:hover{background:#475569;}
+        .status-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#0f172a;border-radius:8px;margin-bottom:12px;font-size:13px;border:1px solid #22c55e40;}
+        .status-bar .date{color:#4ade80;font-weight:700;}
+        .status-bar .count{color:#94a3b8;}
+        .date-selector{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#0f172a;border-radius:8px;margin-bottom:12px;border:1px solid #334155;flex-wrap:wrap;}
+        .date-selector label{font-size:13px;color:#94a3b8;}
+        .date-selector input[type="date"]{background:#1e293b;border:1px solid #475569;border-radius:6px;color:#e2e8f0;padding:6px 10px;font-size:13px;outline:none;flex:1;min-width:140px;}
+        .date-selector input[type="date"]:focus{border-color:#38bdf8;}
+        .date-status{font-size:12px;padding:4px 12px;border-radius:12px;}
+        .date-status.new{background:#22c55e20;color:#4ade80;}
+        .date-status.exists{background:#f59e0b20;color:#fbbf24;}
+        .date-status.today{background:#38bdf820;color:#38bdf8;}
+        .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#22c55e;color:#0b0f19;padding:12px 24px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.5);opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;max-width:90%;}
+        .toast.show{opacity:1;}
+        .toast.error{background:#ef4444;color:#fff;}
+        .action-row{display:flex;gap:10px;flex-wrap:wrap;}
+        .action-row .btn{flex:1;min-width:100px;margin-top:0;}
+        textarea{width:100%;padding:10px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#e2e8f0;font-size:12px;font-family:monospace;resize:vertical;outline:none;margin-top:6px;min-height:100px;}
+        textarea:focus{border-color:#38bdf8;}
+        .batch-actions{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;}
+        .batch-actions .btn-small{flex:1;min-width:80px;text-align:center;}
+        .preview-area{font-size:11px;color:#94a3b8;background:#0f172a;padding:8px;border-radius:6px;margin-top:8px;max-height:120px;overflow:auto;display:none;white-space:pre-wrap;font-family:monospace;border:1px solid #334155;}
+        .preview-area.show{display:block;}
+        @media (max-width:500px){.etf-input-row input{width:70px;font-size:13px;}.etf-input-row .name{font-size:12px;min-width:60px;}.date-selector{flex-direction:column;align-items:stretch;}}
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>📊 统一数据录入</h1>
+    <div class="sub">批量粘贴自动识别 · 三策略共享 · 一键更新</div>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <div class="card-title">📋 智能批量录入</div>
+        <div class="tip">
+            🔹 粘贴任意格式数据，系统自动识别 <strong>名称、代码、价格</strong><br>
+            🔹 支持格式：<span class="highlight">黄金ETF华安,518880,9.004</span> 或 <span class="highlight">518880 9.004</span>
+        </div>
+        <div class="batch-area">
+            <textarea id="batchInput" placeholder="粘贴行情数据，例如：
+黄金ETF华安,518880,9.004
+纳指ETF国泰,513100,2.262
+沪深300ETF华泰柏瑞,510300,4.759"></textarea>
+            <div class="batch-actions">
+                <button class="btn-small" onclick="batchRecognize()" style="background:#0ea5e9;">🔍 识别并填入</button>
+                <button class="btn-small" onclick="clearBatch()">清空</button>
+                <button class="btn-small" onclick="fillExample()" style="background:#0f172a;border:1px solid #334155;">📋 示例数据</button>
+            </div>
+            <div id="batchResult" class="preview-area"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📊 今日价格录入</div>
+        <div class="date-selector">
+            <label for="recordDate">📅 录入日期：</label>
+            <input type="date" id="recordDate">
+            <span id="dateStatus" class="date-status">选择日期</span>
+        </div>
+        <div class="status-bar">
+            <span>📦 数据最后更新：<span class="date" id="lastDate">--</span></span>
+            <span class="count">共 <span id="etfCount">0</span> 只ETF</span>
+        </div>
+        <div id="etfInputList"></div>
+        <div class="action-row" style="margin-top:14px;">
+            <button class="btn btn-run" onclick="runFetch()">⚡ 一键更新</button>
+            <button class="btn btn-fetch" onclick="fetchLatestPrices()">📡 获取最新价</button>
+            <button class="btn btn-success" onclick="saveAllPrices()">💾 保存今日数据</button>
+            <button class="btn-small" onclick="resetForm()" style="background:#450a0a;">重置</button>
+        </div>
+        <div id="saveResult" style="margin-top:10px;font-size:13px;"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title">📂 数据管理</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-small" onclick="viewData()" style="background:#0f172a;border:1px solid #334155;">查看原始数据</button>
+            <button class="btn-small" onclick="downloadBackup()" style="background:#0f172a;border:1px solid #334155;">📥 导出备份</button>
+        </div>
+        <div id="dataPreview" style="margin-top:10px;font-size:11px;color:#64748b;max-height:150px;overflow:auto;background:#0f172a;padding:8px;border-radius:6px;display:none;white-space:pre-wrap;font-family:monospace;"></div>
+    </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ALL_ETF_DATA = [
+    { name: '黄金ETF华安', code: '518880' }, { name: '红利ETF华泰柏瑞', code: '510880' },
+    { name: '沪深300ETF华泰柏瑞', code: '510300' }, { name: '有色金属ETF南方', code: '512400' },
+    { name: '券商ETF华宝', code: '512000' }, { name: '医药ETF易方达', code: '512010' },
+    { name: '酒ETF鹏华', code: '512690' }, { name: '新能源车ETF华夏', code: '515030' },
+    { name: '机器人ETF华夏', code: '562500' }, { name: '通信ETF国泰', code: '515880' },
+    { name: '人工智能ETF易方达', code: '159819' }, { name: '半导体ETF国联安', code: '512480' },
+    { name: '国债ETF国泰', code: '511010' }, { name: '德国ETF华安', code: '513030' },
+    { name: '纳指ETF国泰', code: '513100' }, { name: '恒生互联网ETF华夏', code: '513330' },
+    { name: '科创50ETF华夏', code: '588000' }, { name: '创业板ETF易方达', code: '159915' }
+];
+
+function buildNameMap() {
+    const map = {};
+    ALL_ETF_DATA.forEach(etf => {
+        const clean = etf.name.replace(/ETF/g, '').replace(/[（）()]/g, '').trim();
+        map[clean] = etf.code;
+        map[etf.name] = etf.code;
+        const chinese = etf.name.replace(/[A-Za-z0-9]/g, '').replace(/ETF/g, '').trim();
+        if (chinese) map[chinese] = etf.code;
+    });
+    return map;
+}
+const NAME_TO_CODE = buildNameMap();
+const DATA_FILE = 'data/prices.json';
+let currentPrices = {};
+let existingDates = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('recordDate').value = today;
+    loadExistingData();
+    renderInputForm();
+    updateDateDisplay();
+    document.getElementById('recordDate').addEventListener('change', updateDateStatus);
+});
+
+function updateDateDisplay() {
+    const now = new Date();
+    const dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    const lastDate = localStorage.getItem('etf_last_data_date') || '--';
+    document.getElementById('lastDate').textContent = lastDate;
+}
+
+function updateDateStatus() {
+    const dateInput = document.getElementById('recordDate');
+    const statusEl = document.getElementById('dateStatus');
+    const selectedDate = dateInput.value;
+    if (!selectedDate) {
+        statusEl.textContent = '请选择日期';
+        statusEl.className = 'date-status';
+        return;
+    }
+    const today = new Date().toISOString().slice(0,10);
+    const isToday = selectedDate === today;
+    const exists = existingDates.includes(selectedDate);
+    if (exists) {
+        statusEl.textContent = `📌 ${selectedDate} 已有数据（将覆盖）`;
+        statusEl.className = 'date-status exists';
+    } else if (isToday) {
+        statusEl.textContent = `📌 ${selectedDate} 今天（将新增）`;
+        statusEl.className = 'date-status today';
+    } else {
+        statusEl.textContent = `📌 ${selectedDate}（将新增）`;
+        statusEl.className = 'date-status new';
+    }
+}
+
+async function loadExistingData() {
+    try {
+        const response = await fetch(DATA_FILE);
+        if (!response.ok) throw new Error('数据文件不存在');
+        const data = await response.json();
+        const prices = data.prices || {};
+        existingDates = data.dates || [];
+        ALL_ETF_DATA.forEach(etf => {
+            const arr = prices[etf.code] || [];
+            currentPrices[etf.code] = arr.length > 0 ? arr[arr.length - 1] : null;
+        });
+        document.getElementById('etfCount').textContent = ALL_ETF_DATA.length;
+        if (existingDates.length > 0) {
+            const lastDate = existingDates[existingDates.length - 1];
+            localStorage.setItem('etf_last_data_date', lastDate);
+            document.getElementById('lastDate').textContent = lastDate;
+        }
+        updateDateStatus();
+    } catch(e) {
+        ALL_ETF_DATA.forEach(etf => { currentPrices[etf.code] = null; });
+        document.getElementById('etfCount').textContent = ALL_ETF_DATA.length;
+    }
+}
+
+function renderInputForm() {
+    const container = document.getElementById('etfInputList');
+    container.innerHTML = ALL_ETF_DATA.map(etf => {
+        const lastPrice = currentPrices[etf.code];
+        const lastDisplay = lastPrice !== null && lastPrice !== undefined ? lastPrice.toFixed(3) : '--';
+        return `
+        <div class="etf-input-row" id="row_${etf.code}">
+            <div class="name">${etf.name}<div class="code">${etf.code}</div></div>
+            <span class="latest" id="latest_${etf.code}">📌 ${lastDisplay}</span>
+            <input type="number" step="0.001" id="price_${etf.code}" placeholder="今日价格" data-code="${etf.code}">
+            <span class="matched-badge" id="badge_${etf.code}" style="display:none;">✓ 已匹配</span>
+        </div>
+    `}).join('');
+}
+
+function batchRecognize() {
+    const raw = document.getElementById('batchInput').value.trim();
+    const resultDiv = document.getElementById('batchResult');
+    if (!raw) {
+        resultDiv.textContent = '⚠️ 请先粘贴数据';
+        resultDiv.className = 'preview-area show';
+        return;
+    }
+    const lines = raw.split('\n').filter(l => l.trim());
+    const recognized = [];
+    const errors = [];
+    lines.forEach(line => {
+        if (/名称|代码|最新价|日期|价格|ETF|现价|收盘/i.test(line) && !/\d{6}/.test(line) && !/[\d\.]+/.test(line)) return;
+        if (/[—－]/.test(line) && !/\d{6}/.test(line)) return;
+        let code = null, price = null;
+        const codeMatch = line.match(/\b(\d{6})\b/);
+        if (codeMatch) code = codeMatch[1];
+        const priceMatches = line.match(/\b(\d+\.\d{3,4})\b/g);
+        if (priceMatches) {
+            for (const p of priceMatches) {
+                const num = parseFloat(p);
+                if (num > 0 && num < 10000 && !/^\d{4}\.\d{2}$/.test(p)) { price = num; break; }
+            }
+        }
+        if (price === null) {
+            const allNums = line.match(/\b(\d+\.\d+)\b/g);
+            if (allNums) {
+                for (const p of allNums) {
+                    const num = parseFloat(p);
+                    if (num > 0 && num < 10000 && !/^\d{4}\.\d{2}$/.test(p)) { price = num; break; }
+                }
+            }
+        }
+        if (!code) {
+            const chineseMatch = line.match(/[\u4e00-\u9fa5]+/g);
+            if (chineseMatch) {
+                const fullText = chineseMatch.join('');
+                for (const [key, val] of Object.entries(NAME_TO_CODE)) {
+                    if (fullText.includes(key) || key.includes(fullText) || fullText.includes(key.replace(/ETF/g,''))) {
+                        code = val; break;
+                    }
+                }
+            }
+        }
+        if (!code) {
+            const cleanLine = line.replace(/[0-9,\.\s\t]/g, '').trim();
+            if (cleanLine.length > 2) {
+                for (const [key, val] of Object.entries(NAME_TO_CODE)) {
+                    if (cleanLine.includes(key) || key.includes(cleanLine)) { code = val; break; }
+                }
+            }
+        }
+        if (code) {
+            const etf = ALL_ETF_DATA.find(e => e.code === code);
+            if (!etf) {
+                const cleanLine = line.replace(/[0-9,\.\s\t]/g, '').trim();
+                for (const [key, val] of Object.entries(NAME_TO_CODE)) {
+                    if (cleanLine.includes(key) || key.includes(cleanLine)) { code = val; break; }
+                }
+            }
+        }
+        const etf = code ? ALL_ETF_DATA.find(e => e.code === code) : null;
+        if (etf && price !== null && price > 0) {
+            recognized.push({ code: etf.code, name: etf.name, price: price });
+        } else if (etf && price === null) {
+            errors.push(`⚠️ "${line.substring(0,40)}..." 未识别到价格`);
+        } else if (code && !etf) {
+            errors.push(`⚠️ 代码 ${code} 不在ETF池中`);
+        } else if (line.trim().length > 3) {
+            errors.push(`⚠️ "${line.substring(0,40)}..." 无法识别`);
+        }
+    });
+    let resultText = '';
+    if (recognized.length > 0) {
+        resultText = `✅ 成功识别 ${recognized.length} 只ETF：\n`;
+        recognized.forEach(r => {
+            resultText += `   ${r.name} (${r.code}) → ${r.price.toFixed(3)}\n`;
+            const input = document.getElementById('price_' + r.code);
+            if (input) {
+                input.value = r.price;
+                const badge = document.getElementById('badge_' + r.code);
+                if (badge) { badge.style.display = 'inline'; badge.textContent = '✓ 已匹配'; }
+            }
+        });
+    } else {
+        resultText = '❌ 未识别到任何有效数据\n';
+    }
+    if (errors.length > 0) {
+        resultText += '\n' + errors.join('\n');
+    }
+    resultDiv.textContent = resultText;
+    resultDiv.className = 'preview-area show';
+    if (recognized.length > 0) {
+        showToast(`✅ 已识别并填入 ${recognized.length} 只ETF价格`, '');
+    }
+}
+
+function clearBatch() {
+    document.getElementById('batchInput').value = '';
+    document.getElementById('batchResult').textContent = '';
+    document.getElementById('batchResult').className = 'preview-area';
+    ALL_ETF_DATA.forEach(etf => {
+        const badge = document.getElementById('badge_' + etf.code);
+        if (badge) badge.style.display = 'none';
+    });
+}
+
+function fillExample() {
+    document.getElementById('batchInput').value = `黄金ETF华安,518880,9.004
+纳指ETF国泰,513100,2.262
+沪深300ETF华泰柏瑞,510300,4.759
+创业板ETF易方达,159915,3.559
+恒生互联网ETF华夏,513330,0.398`;
+    batchRecognize();
+}
+
+function resetForm() {
+    ALL_ETF_DATA.forEach(etf => {
+        const input = document.getElementById('price_' + etf.code);
+        if (input) input.value = '';
+        const badge = document.getElementById('badge_' + etf.code);
+        if (badge) badge.style.display = 'none';
+    });
+    document.getElementById('batchInput').value = '';
+    document.getElementById('batchResult').textContent = '';
+    document.getElementById('batchResult').className = 'preview-area';
+    showToast('已重置所有输入', '');
+}
+
+// ===== 一键更新 =====
+async function runFetch() {
+    const resultDiv = document.getElementById('saveResult');
+    resultDiv.innerHTML = '⏳ 正在获取并保存最新价格...';
+    resultDiv.style.color = '#38bdf8';
+    
+    try {
+        const response = await fetch('/run-fetch', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            resultDiv.innerHTML = '✅ ' + data.message;
+            resultDiv.style.color = '#4ade80';
+            showToast('✅ 价格更新成功', '');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            resultDiv.innerHTML = '❌ ' + data.message;
+            resultDiv.style.color = '#f87171';
+            showToast('更新失败', 'error');
+        }
+    } catch(e) {
+        resultDiv.innerHTML = '❌ 请求失败：' + e.message;
+        resultDiv.style.color = '#f87171';
+        showToast('请求失败', 'error');
+    }
+}
+
+// ===== 获取最新价（填入表单） =====
+async function fetchLatestPrices() {
+    const resultDiv = document.getElementById('saveResult');
+    resultDiv.innerHTML = '⏳ 正在获取最新价格...';
+    resultDiv.style.color = '#38bdf8';
+    
+    try {
+        const response = await fetch('/fetch-prices', { method: 'POST' });
+        const data = await response.json();
+        
+        if (data.success) {
+            const prices = data.prices;
+            let count = 0;
+            for (let code in prices) {
+                const input = document.getElementById('price_' + code);
+                if (input) {
+                    input.value = prices[code].toFixed(3);
+                    count++;
+                    const badge = document.getElementById('badge_' + code);
+                    if (badge) {
+                        badge.style.display = 'inline';
+                        badge.textContent = '📡 已获取';
+                        badge.style.color = '#f59e0b';
+                    }
+                }
+            }
+            resultDiv.innerHTML = `✅ 成功获取 ${count} 只ETF的最新价格`;
+            resultDiv.style.color = '#4ade80';
+            showToast(`✅ 已获取 ${count} 只ETF最新价格`, '');
+        } else {
+            resultDiv.innerHTML = '❌ ' + (data.error || '获取失败');
+            resultDiv.style.color = '#f87171';
+            showToast('获取失败', 'error');
+        }
+    } catch(e) {
+        resultDiv.innerHTML = '❌ 请求失败：' + e.message;
+        resultDiv.style.color = '#f87171';
+        showToast('请求失败', 'error');
+    }
+}
+
+// ===== 保存数据（已加入自动写入时:分） =====
+async function saveAllPrices() {
+    const resultDiv = document.getElementById('saveResult');
+    resultDiv.innerHTML = '⏳ 保存中...';
+    const newPrices = {};
+    let hasData = false;
+    ALL_ETF_DATA.forEach(etf => {
+        const input = document.getElementById('price_' + etf.code);
+        if (input && input.value.trim() !== '') {
+            const val = parseFloat(input.value);
+            if (!isNaN(val) && val > 0) {
+                newPrices[etf.code] = val;
+                hasData = true;
+            }
+        }
+    });
+    if (!hasData) {
+        resultDiv.innerHTML = '⚠️ 请至少输入一个有效价格';
+        showToast('请至少输入一个有效价格', 'error');
+        return;
+    }
+    try {
+        const dateInput = document.getElementById('recordDate');
+        const selectedDate = dateInput.value;
+        if (!selectedDate) {
+            resultDiv.innerHTML = '⚠️ 请先选择日期';
+            showToast('请先选择日期', 'error');
+            return;
+        }
+        let response = await fetch(DATA_FILE);
+        if (!response.ok) throw new Error('数据文件不存在，将新建');
+        let data = await response.json();
+        let prices = data.prices || {};
+        let dates = data.dates || [];
+        const todayIndex = dates.indexOf(selectedDate);
+        for (let code in newPrices) {
+            if (!prices[code]) prices[code] = [];
+            if (todayIndex !== -1) {
+                prices[code][todayIndex] = newPrices[code];
+            } else {
+                prices[code].push(newPrices[code]);
+            }
+            currentPrices[code] = newPrices[code];
+        }
+        if (todayIndex === -1) {
+            dates.push(selectedDate);
+            dates.sort();
+        }
+        data.meta = data.meta || {};
+        data.meta.lastUpdated = selectedDate;
+        // ✅ 新增：自动写入当前时间（时:分）
+        data.meta.lastUpdatedTime = new Date().toTimeString().slice(0, 5);
+
+        const saveResponse = await fetch('/save-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!saveResponse.ok) throw new Error('保存失败');
+        document.getElementById('etfCount').textContent = ALL_ETF_DATA.length;
+        renderInputForm();
+        for (let code in newPrices) {
+            const input = document.getElementById('price_' + code);
+            if (input) input.value = newPrices[code];
+        }
+        const count = Object.keys(newPrices).length;
+        const msg = `✅ 成功保存 ${count} 只ETF的 ${selectedDate} 价格`;
+        resultDiv.innerHTML = msg;
+        showToast(msg, '');
+        localStorage.setItem('etf_last_data_date', selectedDate);
+        document.getElementById('lastDate').textContent = selectedDate;
+        existingDates = dates;
+        updateDateStatus();
+        ALL_ETF_DATA.forEach(etf => {
+            const badge = document.getElementById('badge_' + etf.code);
+            if (badge) badge.style.display = 'none';
+        });
+    } catch(e) {
+        resultDiv.innerHTML = '❌ 保存失败：' + e.message;
+        showToast('保存失败：' + e.message, 'error');
+        console.error(e);
+    }
+}
+
+async function viewData() {
+    const preview = document.getElementById('dataPreview');
+    try {
+        const response = await fetch(DATA_FILE);
+        if (!response.ok) throw new Error('数据文件不存在');
+        const data = await response.json();
+        preview.textContent = JSON.stringify(data, null, 2);
+        preview.style.display = 'block';
+    } catch(e) {
+        preview.textContent = '⚠️ 无法加载数据文件';
+        preview.style.display = 'block';
+    }
+}
+
+async function downloadBackup() {
+    try {
+        const response = await fetch(DATA_FILE);
+        if (!response.ok) throw new Error('数据文件不存在');
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        const dateStr = new Date().toISOString().slice(0,10);
+        a.download = `prices_backup_${dateStr}.json`;
+        a.click();
+        showToast('📥 备份文件已下载', '');
+    } catch(e) {
+        showToast('备份失败：' + e.message, 'error');
+    }
+}
+
+function showToast(msg, type = '') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show' + (type === 'error' ? ' error' : '');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+        toast.className = 'toast';
+    }, 3000);
+}
+</script>
+</body>
+</html>
