@@ -1,0 +1,59 @@
+name: update-prices
+
+# 触发方式：
+#   1. 每个交易日北京时间 21:00 自动运行（cron 用 UTC，13:00 UTC = 21:00 北京）
+#   2. 网页上点 "Run workflow" 手动运行（workflow_dispatch）
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * 1-5'
+
+# 用 Actions 自带的仓库写入权限，不需要额外配置任何令牌
+permissions:
+  contents: write
+
+concurrency:
+  group: update-prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: python -m pip install --quiet requests
+
+      - name: 抓取行情并重算得分
+        env:
+          TZ: Asia/Shanghai
+        run: python fetch_prices.py
+
+      - name: 同步数据到站点目录
+        run: |
+          mkdir -p dist/data
+          cp data/prices.json dist/data/prices.json
+          cp data/rank_history.json dist/data/rank_history.json
+
+      - name: 提交变更
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          git config user.name "etf-price-bot"
+          git config user.email "etf-price-bot@users.noreply.github.com"
+          git add data/prices.json data/rank_history.json dist/data/prices.json dist/data/rank_history.json
+          if git diff --cached --quiet; then
+            echo "数据无变化（可能休市），跳过提交"
+          else
+            git commit -m "chore: 自动更新行情与得分 $(date +%F\ %H:%M)"
+            git push
+            echo "已推送，GitHub Pages 将在 1 分钟内自动重建"
+          fi
