@@ -55,6 +55,23 @@
         </div>
     </div>
 
+    <div class="card" id="momentumCard">
+        <div class="card-title">
+            <div class="icon" style="background:#f59e0b20;color:#fbbf24;">⚡</div>
+            <span>5资产 25日动量走势</span>
+            <span style="font-size:12px;color:#94a3b8;margin-left:8px;">动量 > 0 视为多头强势区</span>
+        </div>
+        <div class="time-filter">
+            <button class="time-btn" data-range="week">近一周</button>
+            <button class="time-btn" data-range="month">本月</button>
+            <button class="time-btn active" data-range="all">全部</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="momentumChart"></canvas>
+            <div class="chart-legend" id="momentumLegend"></div>
+        </div>
+    </div>
+
     <div class="tip">💡 得分 = 年化收益率 × R²，综合衡量涨势强度与稳定性。永远满仓得分第一的ETF。</div>
 </div>
 <script>const CURRENT_PAGE = '5';</script>
