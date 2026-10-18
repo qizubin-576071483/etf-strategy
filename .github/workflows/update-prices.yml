@@ -1,12 +1,12 @@
 name: update-prices
 
 # 触发方式：
-#   1. 每个交易日北京时间 21:00 自动运行（cron 用 UTC，13:00 UTC = 21:00 北京）
+#   1. 每个交易日北京时间 15:00 自动运行（cron 用 UTC，07:00 UTC = 15:00 北京）
 #   2. 网页上点 "Run workflow" 手动运行（workflow_dispatch）
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 13 * * 1-5'
+    - cron: '0 7 * * 1-5'
 
 # 用 Actions 自带的仓库写入权限，不需要额外配置任何令牌
 permissions:
