@@ -247,6 +247,8 @@ let momentumColors = [];
 let currentRange = 'all';
 
 async function drawMomentumChart(etfData, storagePrefix, colors, range = 'all') {
+    // 部分页面（如 5/9/12）没有动量走势图区块，缺画布时直接跳过，避免初始化报错
+    if (!document.getElementById('momentumChart') || !document.getElementById('momentumLegend')) return;
     const historyKey = storagePrefix + 'rank_history';
     let history = [];
     try {
@@ -373,6 +375,7 @@ async function drawMomentumChart(etfData, storagePrefix, colors, range = 'all') 
 
 function setupMomentumChartInteraction(etfData, storagePrefix, colors) {
     const canvas = document.getElementById('momentumChart');
+    if (!canvas) return;   // 无动量图区块的页面跳过交互绑定
     const historyKey = storagePrefix + 'rank_history';
 
     function getHistory() {
