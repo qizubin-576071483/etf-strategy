@@ -2,7 +2,10 @@ import requests
 import json
 import re
 import math
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 北京时间：GitHub 服务器默认 UTC，显式指定时区，避免跨零点运行把日期标错
+BJT = timezone(timedelta(hours=8))
 
 # ===== 需要获取的ETF代码列表（18只） =====
 ETF_CODES = [
@@ -63,8 +66,9 @@ def save_to_json(prices):
     except FileNotFoundError:
         data = {"meta": {}, "dates": [], "prices": {}}
     
-    today = datetime.now().strftime('%Y-%m-%d')
-    today_weekday = datetime.now().weekday()  # 0=Monday, 6=Sunday
+    now_bj = datetime.now(BJT)
+    today = now_bj.strftime('%Y-%m-%d')
+    today_weekday = now_bj.weekday()  # 0=Monday, 6=Sunday
     
     # 周末不保存
     if today_weekday >= 5:
@@ -74,6 +78,13 @@ def save_to_json(prices):
     # 检查今天是否已存在
     if today in data['dates']:
         idx = data['dates'].index(today)
+        unchanged = all(
+            code in data['prices'] and data['prices'][code][idx] == prices.get(code)
+            for code in ETF_CODES if code in prices
+        )
+        if unchanged:
+            print(f'[SKIP] {today} 已记录且价格相同（冗余触发空转），不写文件')
+            return
         for code, price in prices.items():
             if code in data['prices']:
                 data['prices'][code][idx] = price
@@ -106,7 +117,7 @@ def save_to_json(prices):
     
     # 保存
     data['meta']['lastUpdated'] = today
-    data['meta']['lastUpdatedTime'] = datetime.now().strftime('%H:%M')
+    data['meta']['lastUpdatedTime'] = now_bj.strftime('%H:%M')
     if data['dates']:
         data['meta']['description'] = f"{len(ETF_CODES)}只ETF历史数据（{data['dates'][0]} 至 {data['dates'][-1]}）"
     with open(file_path, 'w', encoding='utf-8') as f:
@@ -127,9 +138,13 @@ def calc_score(prices, window_days=25, annual_days=250):
     x_mean = sum(x) / n
     y_mean = sum(y) / n
     
-    ss_xy = sum((x[i] - x_mean) * (y[i] - y_mean) for i in range(n))
-    ss_xx = sum((x[i] - x_mean) ** 2 for i in range(n))
-    ss_yy = sum((y[i] - y_mean) ** 2 for i in range(n))
+    ss_xy = 0
+    ss_xx = 0
+    ss_yy = 0
+    for i in range(n):
+        ss_xy += (x[i] - x_mean) * (y[i] - y_mean)
+        ss_xx += (x[i] - x_mean) ** 2
+        ss_yy += (y[i] - y_mean) ** 2
     
     if ss_xx == 0 or ss_yy == 0:
         return {'score': 0, 'r2': 0, 'annualReturn': 0}
@@ -139,7 +154,9 @@ def calc_score(prices, window_days=25, annual_days=250):
     annualized_return = math.exp(slope * annual_days) - 1
     
     y_pred = [intercept + slope * xi for xi in x]
-    ss_res = sum((y[i] - y_pred[i]) ** 2 for i in range(n))
+    ss_res = 0
+    for i in range(n):
+        ss_res += (y[i] - y_pred[i]) ** 2
     r2 = 1 - ss_res / ss_yy
     
     score = annualized_return * r2
