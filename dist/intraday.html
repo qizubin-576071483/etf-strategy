@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>盘中预览 · 实时得分不落盘</title>
+<link rel="stylesheet" href="shared/styles.css">
+<style>
+.banner{padding:10px 12px;border-radius:10px;background:#713f12;color:#fcd34d;font-size:13px;line-height:1.6;margin-bottom:14px}
+.chk-sub{font-size:12px;color:#64748b;margin-top:4px;line-height:1.6}
+.tbl-wrap{overflow-x:auto;margin-top:10px}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.tbl-wrap th,.tbl-wrap td{padding:7px 8px;border-bottom:1px solid #1e293b;text-align:right;white-space:nowrap}
+.tbl-wrap th{color:#8899aa;font-weight:600}
+.tbl-wrap td:nth-child(2),.tbl-wrap th:nth-child(2){text-align:left;color:#e2e8f0}
+.tbl-wrap td.up{color:#f87171}
+.tbl-wrap td.down{color:#4ade80}
+button{padding:8px 14px;background:#1a2a3a;color:#7dd3fc;border:1px solid #253a4a;border-radius:8px;font-size:13px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>盘中预览</h1>
+    <div class="date" id="now">--</div>
+</div>
+<div class="container">
+    <div class="banner">实时价只在浏览器里算得分，<strong>不写入 prices.json / rank_history.json，也不发布</strong>。正式数据仍由 15:10 之后的自动任务写入。</div>
+
+    <div class="card">
+        <div class="card-title"><div class="icon" style="background:#0ea5e920;color:#38bdf8;">📈</div>实时排名预览</div>
+        <div class="chk-sub" id="status">准备中…</div>
+        <div style="margin-top:10px"><button id="refresh">刷新实时价</button></div>
+        <div id="pages"></div>
+    </div>
+
+    <div class="tip">本页依赖本机服务 <strong>http://localhost:8080</strong> 的实时行情接口；线上站点没有该接口，会提示获取失败。"较收盘"是与服务器最近一份收盘快照的得分差。</div>
+</div>
+<script src="shared/engine.js"></script>
+<script>
+(function () {
+    const PAGES = [
+        { id: '4', key: 'etf_simple_trend_rank_history', etfs: [
+            { code: '510300', name: '沪深300ETF' }, { code: '159915', name: '创业板ETF' },
+            { code: '513100', name: '国泰纳指ETF' }, { code: '518880', name: '华安黄金ETF' }
+        ]},
+        { id: '5', key: 'etf_simple_trend_5_rank_history', etfs: [
+            { code: '518880', name: '黄金ETF华安' }, { code: '510880', name: '红利ETF' },
+            { code: '513100', name: '纳指ETF' }, { code: '159915', name: '创业板ETF' },
+            { code: '511010', name: '国债ETF国泰' }
+        ]}
+    ];
+    const W = 25, A = 250;
+    const box = document.getElementById('pages');
+    const status = document.getElementById('status');
+    document.getElementById('now').textContent = new Date().toLocaleString('zh-CN', { hour12: false });
+
+    function fmt(x, d) { return Number(x).toFixed(d === undefined ? 4 : d); }
+
+    async function run() {
+        status.textContent = '正在获取实时价…';
+        status.style.color = '#38bdf8';
+        try {
+            const bust = '?t=' + Date.now();
+            const [data, history, liveResp] = await Promise.all([
+                fetch('data/prices.json' + bust, { cache: 'no-store' }).then(r => r.json()),
+                fetch('data/rank_history.json' + bust, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
+                fetch('/fetch-prices', { method: 'POST' }).then(r => r.json())
+            ]);
+            if (!liveResp.success) throw new Error(liveResp.error || '实时行情接口返回失败');
+
+            const live = liveResp.prices;
+            const dates = data.dates || [];
+            const lastDate = dates[dates.length - 1];
+            const todayBj = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+
+            function seriesFor(code) {
+                const arr = (data.prices[code] || []).slice();
+                const p = live[code];
+                if (p === undefined || p === null) return arr;
+                if (lastDate === todayBj && arr.length) arr[arr.length - 1] = p;
+                else arr.push(p);
+                return arr;
+            }
+
+            let html = '';
+            PAGES.forEach(pg => {
+                const snaps = history[pg.key] || [];
+                const lastSnap = snaps[snaps.length - 1];
+                const results = pg.etfs.map(e => {
+                    const p = live[e.code];
+                    if (p === undefined || p === null) return { ...e, missing: true };
+                    const s = calcScore(seriesFor(e.code), W, A);
+                    const stored = lastSnap && lastSnap.rankings.find(r => r.code === e.code);
+                    return { ...e, ...s, live: p, stored: stored ? stored.score : null };
+                });
+                results.sort((a, b) => (b.score || -Infinity) - (a.score || -Infinity));
+
+                html += '<div style="margin-bottom:18px"><div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:4px;">页面 ' + pg.id + ' · 25 日窗口 / 250 年化</div>';
+                html += '<div class="tbl-wrap"><table><thead><tr><th>排名</th><th>ETF</th><th>实时价</th><th>预览得分</th><th>R²</th><th>年化</th><th>较收盘</th></tr></thead><tbody>';
+                results.forEach((r, i) => {
+                    if (r.missing) {
+                        html += '<tr><td>—</td><td>' + r.name + '</td><td colspan="5" style="color:#f87171">未取到实时价</td></tr>';
+                        return;
+                    }
+                    const diff = r.stored === null ? null : r.score - r.stored;
+                    const cls = diff === null ? '' : (diff >= 0 ? 'up' : 'down');
+                    html += '<tr><td>' + (i + 1) + '</td><td>' + r.name + '</td><td>' + r.live.toFixed(3) + '</td><td>' + fmt(r.score) + '</td><td>' + fmt(r.r2, 3) + '</td><td>' + (r.annualReturn * 100).toFixed(1) + '%</td><td class="' + cls + '">' + (diff === null ? '—' : (diff >= 0 ? '+' : '') + fmt(diff, 4)) + '</td></tr>';
+                });
+                html += '</tbody></table></div></div>';
+            });
+            box.innerHTML = html;
+            status.style.color = '#4ade80';
+            status.textContent = '实时价获取于 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + ' · 纯浏览器计算，未写入任何文件' + (lastDate === todayBj ? '（已用实时价替换当日行）' : '（已把实时价接到序列末尾）');
+            document.getElementById('now').textContent = new Date().toLocaleString('zh-CN', { hour12: false });
+        } catch (e) {
+            box.innerHTML = '';
+            status.style.color = '#f87171';
+            status.textContent = '获取失败：' + e.message + '。请通过本机服务 http://localhost:8080/intraday.html 打开。';
+        }
+    }
+
+    document.getElementById('refresh').onclick = run;
+    run();
+})();
+</script>
+</body>
+</html>
