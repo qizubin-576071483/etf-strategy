@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>价格核对 · 收盘价 vs 盘中价</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#e2e8f0;padding:16px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:20px;color:#fff;margin-bottom:6px}
+.sub{font-size:12px;color:#94a3b8;margin-bottom:16px}
+.card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;margin-bottom:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.btn{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+.btn:active{background:#1d4ed8}
+.btn:disabled{background:#475569;cursor:not-allowed}
+.info{font-size:12px;color:#94a3b8;margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th,td{padding:8px 6px;text-align:left;border-bottom:1px solid #334155;white-space:nowrap}
+th{color:#94a3b8;font-weight:600;font-size:12px}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.ok{color:#4ade80}.bad{color:#f87171}.warn{color:#fbbf24}.muted{color:#64748b}
+.badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600}
+.b-ok{background:#166534;color:#bbf7d0}.b-bad{background:#991b1b;color:#fecaca}
+.b-mid{background:#854d0e;color:#fef08a}.b-none{background:#334155;color:#94a3b8}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+summary{cursor:pointer;font-size:13px;color:#93c5fd;padding:6px 0}
+.legend{font-size:12px;color:#94a3b8;line-height:1.9;margin-top:10px}
+.tip{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;font-size:12px;color:#94a3b8;line-height:1.7}
+.err{background:#7f1d1d;color:#fecaca;padding:10px;border-radius:8px;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>价格核对 · 收盘价还是盘中价？</h1>
+<div class="sub">用真实日K收盘价逐日比对，找出哪天存的是盘中价</div>
+
+<div class="card">
+<div class="row">
+<button class="btn" id="runBtn" onclick="run()">开始核对</button>
+<span class="info" id="status">核对最近 15 个交易日</span>
+</div>
+<div class="info">对比方法：数据文件里的价格 = 真实收盘价 → ✅ 收盘价；不等于 → ⚠️ 疑似盘中价/错价；行情接口还没收录该日 → ⏳ 待收录。</div>
+<div id="error"></div>
+</div>
+
+<div class="card" id="resultCard" style="display:none">
+<div class="scroll">
+<table id="resultTable">
+<thead><tr><th>日期</th><th class="num">数据价</th><th class="num">真实收盘</th><th class="num">差</th><th>判定</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<div class="legend" id="summary"></div>
+</div>
+
+<div class="card">
+<div class="tip">
+<strong>说明</strong><br>
+· 只对最近 15 个交易日核对（越往前数据越多、请求越慢）。<br>
+· 当天数据：行情接口的日K常常要到<strong>收盘后一小时甚至次日</strong>才收录，所以今天那行常显示"待收录"，属正常。<br>
+· 判定为"疑似盘中价"的日期：数据文件里的价格 ≠ 那天真实收盘价，说明是盘中写入后没有被收盘价覆写。点击详情可看是哪只 ETF。<br>
+· 本页只读，不修改任何数据。
+</div>
+</div>
+</div>
+
+<script>
+// 数据文件里存的代码 -> 行情接口代码
+const CODE_MAP = {
+  '159819':'sz159819','159915':'sz159915','510300':'sh510300','510880':'sh510880',
+  '511010':'sh511010','512000':'sh512000','512010':'sh512010','512400':'sh512400',
+  '512480':'sh512480','512690':'sh512690','513030':'sh513030','513100':'sh513100',
+  '513330':'sh513330','515030':'sh515030','515880':'sh515880','518880':'sh518880',
+  '562500':'sh562500','588000':'sh588000'
+};
+const CHECK_CODES = ['510300','159915','518880','513100','511010','510880']; // 核对用的代表性 ETF
+const DAYS = 15;
+let _seq = 0;
+const _cbs = {};
+
+function bjToday() {
+  const d = new Date(Date.now() + 8*3600*1000);
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+}
+
+function loadKline(sym, cbName) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    const end = bjToday();
+    const start = new Date(Date.now() - 45*86400000 + 8*3600*1000);
+    const sd = start.getUTCFullYear()+'-'+String(start.getUTCMonth()+1).padStart(2,'0')+'-'+String(start.getUTCDate()).padStart(2,'0');
+    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param='+sym+',day,'+sd+','+end+',60,qfq&_var='+cbName;
+    s.onload = () => {
+      const obj = window[cbName];
+      if (!obj || obj.code !== 0) return reject(new Error(sym+' 无数据'));
+      const d = (obj.data||{})[sym] || {};
+      const rows = d.qfqday || d.day || [];
+      const map = {};
+      rows.forEach(r => { map[r[0]] = parseFloat(r[2]); });
+      resolve(map);
+    };
+    s.onerror = () => reject(new Error(sym+' 请求失败'));
+    document.head.appendChild(s);
+  });
+}
+
+async function run() {
+  const btn = document.getElementById('runBtn');
+  const status = document.getElementById('status');
+  const errBox = document.getElementById('error');
+  errBox.innerHTML = '';
+  btn.disabled = true; btn.textContent = '核对中…';
+  status.textContent = '正在读取价格数据…';
+  try {
+    const resp = await fetch('data/prices.json?t='+Date.now(), {cache:'no-store'});
+    if (!resp.ok) throw new Error('无法读取 data/prices.json (HTTP '+resp.status+')');
+    const data = await resp.json();
+    const dates = data.dates.slice(-DAYS);
+    const offset = data.dates.length - dates.length;
+    status.textContent = '正在拉取真实收盘价（'+CHECK_CODES.length+' 只 ETF）…';
+
+    // 并发拉取代表性 ETF 的日K
+    const klines = {};
+    await Promise.all(CHECK_CODES.map(async code => {
+      const sym = CODE_MAP[code];
+      if (!sym) return;
+      const cb = '__k'+(++_seq)+'_'+Date.now();
+      try { klines[code] = await loadKline(sym, cb); }
+      catch(e) { /* 单只失败不影响整体 */ }
+    }));
+
+    if (Object.keys(klines).length === 0) throw new Error('行情接口不可用，请检查网络后重试');
+
+    // 逐日判定
+    const rows = [];
+    const detail = {}; // date -> [{code,stored,real,diff}]
+    dates.forEach((dt, idx) => {
+      const i = offset + idx;
+      let same=0, diff=0, noK=0;
+      const diffs=[];
+      CHECK_CODES.forEach(code => {
+        const stored = data.prices[code] ? data.prices[code][i] : null;
+        const real = klines[code] ? klines[code][dt] : null;
+        if (stored==null || real==null) { noK++; return; }
+        const d = stored - real;
+        diffs.push({code, stored, real, diff:d});
+        if (Math.abs(d) < 0.0011) same++; else diff++;
+      });
+      let verdict, cls, badge;
+      if (noK === CHECK_CODES.length) { verdict='待收录'; cls='muted'; badge='b-none'; }
+      else if (diff > 0) { verdict='疑似盘中价'; cls='bad'; badge='b-bad'; }
+      else if (same > 0 && noK > 0) { verdict='收盘✓(部分待收录)'; cls='ok'; badge='b-ok'; }
+      else { verdict='收盘价✓'; cls='ok'; badge='b-ok'; }
+      rows.push({dt, verdict, cls, badge, same, diff, noK, storedFirst:data.prices[CHECK_CODES[0]] ? data.prices[CHECK_CODES[0]][i] : null, realFirst:klines[CHECK_CODES[0]] ? klines[CHECK_CODES[0]][dt] : null});
+      if (diff>0) detail[dt]=diffs.filter(x=>Math.abs(x.diff)>=0.0011);
+    });
+
+    const tbody = document.querySelector('#resultTable tbody');
+    tbody.innerHTML = rows.map(r => {
+      const d = (r.storedFirst!=null && r.realFirst!=null) ? (r.storedFirst-r.realFirst) : null;
+      const dstr = d==null ? '—' : (Math.abs(d)<0.0011 ? '0' : (d>0?'+':'')+d.toFixed(3));
+      const dcls = d==null ? 'muted' : (Math.abs(d)<0.0011?'ok':'bad');
+      return '<tr>'+
+        '<td>'+r.dt+'</td>'+
+        '<td class="num">'+(r.storedFirst!=null?r.storedFirst:'—')+'</td>'+
+        '<td class="num">'+(r.realFirst!=null?r.realFirst:'—')+'</td>'+
+        '<td class="num '+dcls+'">'+dstr+'</td>'+
+        '<td><span class="badge '+r.badge+'">'+r.verdict+'</span></td>'+
+      '</tr>';
+    }).join('');
+
+    const bad = rows.filter(r=>r.diff>0);
+    const ok = rows.filter(r=>r.badge==='b-ok');
+    const none = rows.filter(r=>r.badge==='b-none');
+    let s = '结果：✅ 收盘价 '+ok.length+' 天 · ⚠️ 疑似盘中价 '+bad.length+' 天 · ⏳ 待收录 '+none.length+' 天';
+    if (bad.length) s += '<br><span class="bad">疑似盘中价的日期：'+bad.map(r=>r.dt).join('、')+'</span>';
+    document.getElementById('summary').innerHTML = s;
+    document.getElementById('resultCard').style.display='block';
+    status.textContent = '核对完成（数据截至 '+(data.meta&&data.meta.lastUpdated||'未知')+' '+(data.meta&&data.meta.lastUpdatedTime||'')+'）';
+  } catch(e) {
+    errBox.innerHTML = '<div class="err">核对失败：'+e.message+'</div>';
+    status.textContent = '核对失败';
+  } finally {
+    btn.disabled=false; btn.textContent='重新核对';
+  }
+}
+</script>
+</body>
+</html>
