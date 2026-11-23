@@ -61,6 +61,12 @@
             // 初始化合动量走势图
             await drawMomentumChart(etfData, storagePrefix, fixedColors, 'all');
             setupMomentumChartInteraction(etfData, storagePrefix, fixedColors);
+
+            // 策略回测：永远满仓第一
+            renderBacktest(etfData, myPrices, allDates, { windowDays: params.windowDays, annualDays: params.annualDays });
+            document.querySelectorAll('.bt-range-btn').forEach(btn => {
+                btn.addEventListener('click', function () { applyBacktestRange(this.dataset.range); });
+            });
             
             // 时间范围按钮事件
             document.querySelectorAll('.time-btn').forEach(btn => {
@@ -92,6 +98,7 @@
             await drawRankChart({ ...chartCfg, _highlightIndex: -1 });
             if (hasHistoryTable) await renderHistoryTable(etfData, storagePrefix);
             await drawMomentumChart(etfData, storagePrefix, fixedColors, currentRange);
+            renderBacktest(etfData, myPrices, allDates, { windowDays: params.windowDays, annualDays: params.annualDays });
         } catch (e) {
             alert('加载数据失败: ' + e.message);
             console.error(e);
