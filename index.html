@@ -18,11 +18,16 @@ h1{font-size:24px;margin-bottom:24px;color:#fff;text-align:center}
 .solo{display:block;padding:14px 12px;background:#16212c;border:1px solid #253a4a;border-radius:12px;text-align:center;text-decoration:none;color:#7dd3fc;font-size:15px;font-weight:500}
 .solo:hover,.solo:active{background:#1d2b38}
 .note{font-size:11px;color:#667788;margin-top:14px;line-height:1.5;text-align:center}
+.verify-entry{display:block;padding:16px 14px;margin-bottom:22px;background:linear-gradient(135deg,#0e7490,#155e75);border:1px solid #22d3ee;border-radius:14px;text-decoration:none;color:#fff;font-size:16px;font-weight:600;text-align:center;box-shadow:0 4px 14px rgba(34,211,238,.18)}
+.verify-entry:hover,.verify-entry:active{filter:brightness(1.12)}
+.verify-entry .sub{display:block;font-size:11px;color:#a5f3fc;font-weight:400;margin-top:5px}
 </style>
 </head>
 <body>
 <h1>ETF 策略集</h1>
 <div class="wrap">
+
+<a class="verify-entry" href="verify.html">价格核对 · 每天是收盘价还是盘中价？<span class="sub">手机直接打开，找出哪天漏更新</span></a>
 
 <div class="group">
 <h2>排名轨迹（读服务器数据，交易日自动更新）</h2>
@@ -46,7 +51,6 @@ h1{font-size:24px;margin-bottom:24px;color:#fff;text-align:center}
 <div class="group">
 <a class="solo" href="trigger_update.html">手动更新价格</a>
 <a class="solo" style="margin-top:10px;" href="data_check.html">数据自检 · 核对得分与价格</a>
-<a class="solo" style="margin-top:10px;" href="verify.html">价格核对 · 找出盘中价的日子</a>
 <p class="note">排名轨迹的历史来自服务器文件，换手机也能看到；详细分析页的轨迹是本机记录，换设备或清缓存会重新积累。交易日收盘后自动更新（一般当晚完成），周末与节假日休市不会有新数据。</p>
 </div>
 
