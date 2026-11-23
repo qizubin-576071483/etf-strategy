@@ -93,26 +93,38 @@ def validate(data, tag=''):
     return problems
 
 
+def resolve_target_date(now_bj, last_date):
+    """
+    判断抓到的价格归属哪个交易日，而不是按运行时刻的日期写。
+
+    行情接口在非交易时段返回的是「最近一个交易日收盘价」；若定时任务
+    延迟到凌晨运行，按运行日期写会把昨天的收盘价标成今天，导致盘中
+    手动写入的价格永远定格。因此：
+      - 交易日 9:30 之后（盘中/收盘后）：价格属于今天
+      - 凌晨 / 开盘前 / 周末 / 节假日：价格属于数据里最后一个交易日
+    """
+    weekday = now_bj.weekday()
+    minute_of_day = now_bj.hour * 60 + now_bj.minute
+    if weekday < 5 and minute_of_day >= 9 * 60 + 30:
+        return now_bj.strftime('%Y-%m-%d')
+    return last_date or now_bj.strftime('%Y-%m-%d')
+
+
 def save_to_json(prices):
-    """保存到 data/prices.json（追加今日数据）"""
+    """保存到 data/prices.json（按价格归属交易日写入）"""
     file_path = 'data/prices.json'
-    
+
     # 读取现有数据
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
     except FileNotFoundError:
         data = {"meta": {}, "dates": [], "prices": {}}
-    
+
     now_bj = datetime.now(BJT)
-    today = now_bj.strftime('%Y-%m-%d')
-    today_weekday = now_bj.weekday()  # 0=Monday, 6=Sunday
-    
-    # 周末不保存
-    if today_weekday >= 5:
-        print(f'[SKIP] Weekend ({today})')
-        return
-    
+    last_date = data['dates'][-1] if data['dates'] else None
+    today = resolve_target_date(now_bj, last_date)
+
     # 检查今天是否已存在
     if today in data['dates']:
         idx = data['dates'].index(today)
