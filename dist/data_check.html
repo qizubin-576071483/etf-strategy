@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>数据自检</title>
+<link rel="stylesheet" href="shared/styles.css">
+<style>
+.chk-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.chk-badge{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:700}
+.chk-ok{background:#14532d;color:#86efac}
+.chk-warn{background:#713f12;color:#fcd34d}
+.chk-fail{background:#7f1d1d;color:#fca5a5}
+.chk-list{margin-top:10px}
+.chk-item{display:flex;justify-content:space-between;gap:10px;padding:9px 10px;border-bottom:1px solid #1e293b;font-size:13px;line-height:1.6}
+.chk-item:last-child{border-bottom:none}
+.chk-name{color:#94a3b8;flex:0 0 130px}
+.chk-val{color:#e2e8f0;flex:1;text-align:right;word-break:break-all}
+.chk-val.bad{color:#f87171;font-weight:600}
+.chk-val.good{color:#4ade80}
+.chk-sub{font-size:12px;color:#64748b;margin-top:4px}
+.tbl-wrap{overflow-x:auto;margin-top:8px}
+.tbl-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.tbl-wrap th,.tbl-wrap td{padding:6px 8px;border-bottom:1px solid #1e293b;text-align:right;white-space:nowrap}
+.tbl-wrap th{color:#8899aa;font-weight:600;text-align:right}
+.tbl-wrap td:first-child,.tbl-wrap th:first-child{text-align:left;color:#94a3b8}
+.tbl-wrap td.dev{color:#fbbf24;font-weight:600}
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>🩺 数据自检</h1>
+    <div class="date" id="currentDate">--</div>
+</div>
+<div class="container">
+    <div class="card">
+        <div class="card-title"><div class="icon bg-green">📋</div>结构体检</div>
+        <div class="chk-head"><span class="chk-badge" id="overall">检查中…</span><span class="chk-sub" id="overallSub"></span></div>
+        <div class="chk-list" id="chkList"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><div class="icon" style="background:#0ea5e920;color:#38bdf8;">🧮</div>得分复核（最近 5 个交易日）</div>
+        <div class="chk-sub">本页用线上价格按页面参数（默认 25 日窗口 / 250 年化）独立重算，与服务器存储的得分快照逐条比对，误差超过 0.000001 视为不一致。</div>
+        <div id="recheckPages"></div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><div class="icon" style="background:#f59e0b20;color:#fbbf24;">📉</div>最近 6 个交易日价格与单日涨跌</div>
+        <div class="chk-sub">涨跌超过 ±12% 标黄，供你人工对照行情软件核实（分红除权也会造成跳空，属正常）。</div>
+        <div class="tbl-wrap" id="priceTable"></div>
+    </div>
+
+    <div class="tip">💡 发现可疑项不代表一定出错：分红除权、停牌都会造成价格跳空。拿不准时把这一页截图发我，我帮你逐条核对。</div>
+</div>
+<script src="shared/engine.js"></script>
+<script>
+(function () {
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const PAGES = [
+        { id: '4', key: 'etf_simple_trend_rank_history', names: { '510300': '沪深300ETF', '159915': '创业板ETF', '513100': '国泰纳指ETF', '518880': '华安黄金ETF' } },
+        { id: '5', key: 'etf_simple_trend_5_rank_history', names: { '518880': '黄金ETF华安', '510880': '红利ETF', '513100': '纳指ETF', '159915': '创业板ETF', '511010': '国债ETF国泰' } },
+    ];
+    const W = 25, A = 250;
+    let warnings = [];
+
+    function row(name, val, cls) {
+        return '<div class="chk-item"><div class="chk-name">' + name + '</div><div class="chk-val ' + (cls || '') + '">' + val + '</div></div>';
+    }
+
+    async function main() {
+        const prices = await (await fetch('data/prices.json?t=' + Date.now(), { cache: 'no-store' })).json();
+        const history = await (await fetch('data/rank_history.json?t=' + Date.now(), { cache: 'no-store' })).json();
+        const dates = prices.dates || [];
+        const list = [];
+
+        // 1 日期合法性与递增
+        let badDate = [];
+        for (let i = 0; i < dates.length; i++) {
+            const wd = new Date(dates[i] + 'T00:00:00+08:00').getDay();
+            if (wd === 0 || wd === 6) badDate.push(dates[i] + '(周末)');
+            if (i && dates[i] <= dates[i - 1]) badDate.push(dates[i] + '(乱序)');
+        }
+        if (badDate.length) warnings.push('日期异常');
+        list.push(row('交易日序列', dates.length + ' 天（' + dates[0] + ' ~ ' + dates[dates.length - 1] + '）', badDate.length ? 'bad' : 'good'));
+        if (badDate.length) list.push(row('　└ 异常日期', badDate.slice(0, 6).join('、'), 'bad'));
+
+        // 2 行列对齐与空值
+        let ragged = [], nulls = 0;
+        const codes = Object.keys(prices.prices);
+        codes.forEach(c => {
+            const r = prices.prices[c];
+            if (r.length !== dates.length) ragged.push(c + '(' + r.length + ')');
+            nulls += r.filter(v => v === null || v === undefined).length;
+        });
+        if (ragged.length) warnings.push('行列不齐');
+        list.push(row('行列对齐', ragged.length ? ragged.join('、') + ' 与日期数不符' : codes.length + ' 只ETF × ' + dates.length + ' 天，全部对齐', ragged.length ? 'bad' : 'good'));
+        list.push(row('缺失值', nulls ? nulls + ' 个空值（可能停牌）' : '无', nulls ? '' : 'good'));
+
+        // 3 单日涨跌异常
+        const li = dates.length - 1;
+        let movers = [];
+        codes.forEach(c => {
+            const r = prices.prices[c];
+            for (let i = Math.max(1, li - 5); i <= li; i++) {
+                if (r[i] == null || r[i - 1] == null || r[i - 1] === 0) continue;
+                const chg = (r[i] - r[i - 1]) / Math.abs(r[i - 1]);
+                if (Math.abs(chg) > 0.12) movers.push(c + ' ' + dates[i].slice(5) + ' ' + (chg * 100).toFixed(1) + '%');
+            }
+        });
+        list.push(row('近6日大涨大跌', movers.length ? movers.join('；') + '（请人工核对，含除权可能）' : '无超过 ±12% 的变动', movers.length ? '' : 'good'));
+
+        // 4 存储快照与重算一致性
+        let mismatch = [];
+        const recheckBox = document.getElementById('recheckPages');
+        PAGES.forEach(pg => {
+            const snaps = history[pg.key] || [];
+            const codesPg = Object.keys(pg.names);
+            let html = '<div style="margin-bottom:14px"><div style="font-size:13px;font-weight:600;color:#e2e8f0;margin-bottom:4px;">页面 ' + pg.id + '（' + snaps.length + ' 天快照）</div><div class="tbl-wrap"><table><thead><tr><th>日期</th>';
+            codesPg.forEach(c => { html += '<th>' + pg.names[c].replace('ETF', '') + '</th>'; });
+            html += '<th>比对</th></tr></thead><tbody>';
+            snaps.slice(-5).forEach(snap => {
+                const full = dates.find(d => d.slice(5) === snap.time);
+                const idx = dates.indexOf(full);
+                html += '<tr><td>' + snap.time + '</td>';
+                let ok = true;
+                codesPg.forEach(c => {
+                    const stored = snap.rankings.find(r => r.code === c);
+                    const recomputed = idx >= 0 ? calcScore((prices.prices[c] || []).slice(0, idx + 1), W, A).score : null;
+                    const diff = stored && recomputed !== null ? Math.abs(stored.score - recomputed) : null;
+                    if (diff === null || diff > 1e-6) ok = false;
+                    html += '<td' + (diff !== null && diff > 1e-6 ? ' class="dev"' : '') + '>' + (stored ? stored.score.toFixed(4) : '—') + '</td>';
+                });
+                html += '<td>' + (ok ? '<span style="color:#4ade80">一致</span>' : '<span style="color:#f87171">不一致</span>') + '</td></tr>';
+                if (!ok) mismatch.push('页面' + pg.id + ' ' + snap.time);
+            });
+            html += '</tbody></table></div></div>';
+            recheckBox.insertAdjacentHTML('beforeend', html);
+        });
+        if (mismatch.length) warnings.push('得分与价格不一致');
+        list.push(row('得分复核', mismatch.length ? mismatch.join('、') + ' 与重算不符' : '最近 5 天全部快照与价格重算一致', mismatch.length ? 'bad' : 'good'));
+
+        // 5 更新时间
+        const meta = prices.meta || {};
+        const lastDate = dates[li];
+        const nowBj = new Date(Date.now() + 8 * 3600e3);
+        const todayBj = nowBj.toISOString().slice(0, 10);
+        const wdBj = nowBj.getUTCDay();
+        const isWeekend = wdBj === 0 || wdBj === 6;
+        const stale = !isWeekend && lastDate !== todayBj && nowBj.getUTCHours() >= 13; // 北京21点后仍无当日数据
+        if (stale) warnings.push('当日数据缺失');
+        list.push(row('数据截至', lastDate + ' ' + (meta.lastUpdatedTime || '') + '（写入于 ' + (meta.lastUpdated || '-') + '）', stale ? 'bad' : ''));
+        if (stale) list.push(row('　└ 提示', '今天为交易日且已过 21:10 兜底时点，仍无当日数据，建议手动运行一次更新', 'bad'));
+
+        // 价格表
+        let tbl = '<table><thead><tr><th>ETF</th>';
+        dates.slice(-6).forEach(d => { tbl += '<th>' + d.slice(5) + '</th>'; });
+        tbl += '</tr></thead><tbody>';
+        codes.forEach(c => {
+            tbl += '<tr><td>' + c + '</td>';
+            for (let i = li - 5; i <= li; i++) {
+                const v = prices.prices[c][i];
+                const pv = prices.prices[c][i - 1];
+                let cls = '', txt = v == null ? '—' : v;
+                if (v != null && pv != null && pv !== 0) {
+                    const chg = (v - pv) / Math.abs(pv);
+                    if (Math.abs(chg) > 0.12) cls = 'dev';
+                    txt = v + ' <span style="color:' + (chg > 0 ? '#4ade80' : '#f87171') + ';font-size:10px">(' + (chg * 100).toFixed(1) + '%)</span>';
+                }
+                tbl += '<td class="' + cls + '">' + txt + '</td>';
+            }
+            tbl += '</tr>';
+        });
+        tbl += '</tbody></table>';
+        document.getElementById('priceTable').innerHTML = tbl;
+
+        document.getElementById('chkList').innerHTML = list.join('');
+        const badge = document.getElementById('overall');
+        if (warnings.length === 0) { badge.textContent = '全部通过'; badge.className = 'chk-badge chk-ok'; }
+        else { badge.textContent = warnings.length + ' 项需留意'; badge.className = 'chk-badge chk-warn'; }
+        document.getElementById('overallSub').textContent = warnings.length ? warnings.join('、') : '结构、对齐、得分复核均无异常';
+    }
+
+    main().catch(e => {
+        document.getElementById('overall').textContent = '检查失败';
+        document.getElementById('overall').className = 'chk-badge chk-fail';
+        document.getElementById('overallSub').textContent = e.message;
+    });
+})();
+</script>
+</body>
+</html>
