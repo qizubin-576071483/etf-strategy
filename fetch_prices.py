@@ -79,7 +79,8 @@ def validate(data, tag=''):
         li = len(dates) - 1
         for code in ETF_CODES:
             row = data['prices'].get(code)
-            if not row or row[li] is None or row[li - 1] is None or row[li - 1] == 0:
+            # 行列不齐的行已在上面告警，这里跳过，避免索引越界中断落盘
+            if not row or len(row) <= li or row[li] is None or row[li - 1] is None or row[li - 1] == 0:
                 continue
             chg = abs(row[li] - row[li - 1]) / abs(row[li - 1])
             if chg > MAX_DAILY_MOVE:

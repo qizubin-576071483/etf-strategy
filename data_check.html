@@ -148,7 +148,9 @@
         const todayBj = nowBj.toISOString().slice(0, 10);
         const wdBj = nowBj.getUTCDay();
         const isWeekend = wdBj === 0 || wdBj === 6;
-        const stale = !isWeekend && lastDate !== todayBj && nowBj.getUTCHours() >= 13; // 北京21点后仍无当日数据
+        const bh = nowBj.getUTCHours(), bm = nowBj.getUTCMinutes();
+        const afterCutoff = bh > 21 || (bh === 21 && bm >= 10); // 北京时间 21:10 兜底时点之后
+        const stale = !isWeekend && lastDate !== todayBj && afterCutoff;
         if (stale) warnings.push('当日数据缺失');
         list.push(row('数据截至', lastDate + ' ' + (meta.lastUpdatedTime || '') + '（写入于 ' + (meta.lastUpdated || '-') + '）', stale ? 'bad' : ''));
         if (stale) list.push(row('　└ 提示', '今天为交易日且已过 21:10 兜底时点，仍无当日数据，建议手动运行一次更新', 'bad'));
@@ -166,7 +168,7 @@
                 if (v != null && pv != null && pv !== 0) {
                     const chg = (v - pv) / Math.abs(pv);
                     if (Math.abs(chg) > 0.12) cls = 'dev';
-                    txt = v + ' <span style="color:' + (chg > 0 ? '#4ade80' : '#f87171') + ';font-size:10px">(' + (chg * 100).toFixed(1) + '%)</span>';
+                    txt = v + ' <span style="color:' + (chg > 0 ? '#f87171' : '#4ade80') + ';font-size:10px">(' + (chg * 100).toFixed(1) + '%)</span>';
                 }
                 tbl += '<td class="' + cls + '">' + txt + '</td>';
             }
