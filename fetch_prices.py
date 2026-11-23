@@ -55,6 +55,43 @@ def fetch_etf_prices():
     
     return prices
 
+MAX_DAILY_MOVE = 0.12  # 单日涨跌超过 12% 视为可疑（ETF 极少见），仅告警不阻断
+
+
+def validate(data, tag=''):
+    """落盘前结构校验：日期合法性/递增性、行列对齐、末日涨跌幅异常检测。"""
+    dates = data['dates']
+    problems = []
+    for i, d in enumerate(dates):
+        try:
+            wd = datetime.strptime(d, '%Y-%m-%d').weekday()
+        except ValueError:
+            problems.append('日期格式非法 %s' % d)
+            continue
+        if wd >= 5:
+            problems.append('周末日期 %s' % d)
+        if i and d <= dates[i - 1]:
+            problems.append('日期未递增 %s' % d)
+    for code, row in data['prices'].items():
+        if len(row) != len(dates):
+            problems.append('%s 行长度 %d 与日期数 %d 不齐' % (code, len(row), len(dates)))
+    if len(dates) >= 2:
+        li = len(dates) - 1
+        for code in ETF_CODES:
+            row = data['prices'].get(code)
+            if not row or row[li] is None or row[li - 1] is None or row[li - 1] == 0:
+                continue
+            chg = abs(row[li] - row[li - 1]) / abs(row[li - 1])
+            if chg > MAX_DAILY_MOVE:
+                problems.append('%s 单日变动 %.1f%% 异常（%s）' % (code, chg * 100, dates[li]))
+    if problems:
+        for p in problems:
+            print('[WARN][%s] %s' % (tag, p))
+    else:
+        print('[OK][%s] 数据结构校验通过' % tag)
+    return problems
+
+
 def save_to_json(prices):
     """保存到 data/prices.json（追加今日数据）"""
     file_path = 'data/prices.json'
@@ -115,6 +152,8 @@ def save_to_json(prices):
                 data['prices'][code].append(None)
         print(f'[APPEND] {len(prices)} ETF on {today}')
     
+    validate(data, '保存前')
+
     # 保存
     data['meta']['lastUpdated'] = today
     data['meta']['lastUpdatedTime'] = now_bj.strftime('%H:%M')
