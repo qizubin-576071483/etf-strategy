@@ -33,7 +33,7 @@ button{padding:8px 14px;background:#1a2a3a;color:#7dd3fc;border:1px solid #253a4
         <div id="pages"></div>
     </div>
 
-    <div class="tip">本页依赖本机服务 <strong>http://localhost:8080</strong> 的实时行情接口；线上站点没有该接口，会提示获取失败。"较收盘"是与服务器最近一份收盘快照的得分差。</div>
+    <div class="tip">本页直接从行情接口读取实时价，<strong>纯静态页面，手机打开网址就能用，不需要你的电脑开机</strong>。"较收盘"是与服务器最近一份收盘快照的得分差。</div>
 </div>
 <script src="shared/engine.js"></script>
 <script>
@@ -56,19 +56,46 @@ button{padding:8px 14px;background:#1a2a3a;color:#7dd3fc;border:1px solid #253a4
 
     function fmt(x, d) { return Number(x).toFixed(d === undefined ? 4 : d); }
 
+    // 用 script 标签加载腾讯行情，避开跨域限制；静态站点也能用，无需后端
+    function loadLive(codes) {
+        return new Promise(function (resolve, reject) {
+            const keys = codes.map(function (c) { return (c.charAt(0) in { '5': 1, '6': 1, '9': 1 } ? 'sh' : 'sz') + c; });
+            keys.forEach(function (k) { window['v_' + k] = null; });
+            const s = document.createElement('script');
+            s.charset = 'GBK';
+            s.src = 'https://qt.gtimg.cn/q=' + keys.join(',') + '&_=' + Date.now();
+            const timer = setTimeout(function () { cleanup(); reject(new Error('行情接口超时')); }, 10000);
+            function cleanup() { clearTimeout(timer); if (s.parentNode) s.parentNode.removeChild(s); }
+            s.onload = function () {
+                cleanup();
+                const out = {};
+                codes.forEach(function (c, i) {
+                    const raw = window['v_' + keys[i]];
+                    if (typeof raw !== 'string') return;
+                    const parts = raw.split('~');
+                    const p = parseFloat(parts[3]);
+                    if (parts.length > 3 && isFinite(p) && p > 0) out[c] = p;
+                });
+                if (Object.keys(out).length === 0) reject(new Error('行情返回为空'));
+                else resolve(out);
+            };
+            s.onerror = function () { cleanup(); reject(new Error('行情接口请求失败')); };
+            document.head.appendChild(s);
+        });
+    }
+
     async function run() {
         status.textContent = '正在获取实时价…';
         status.style.color = '#38bdf8';
         try {
             const bust = '?t=' + Date.now();
-            const [data, history, liveResp] = await Promise.all([
+            const [data, history] = await Promise.all([
                 fetch('data/prices.json' + bust, { cache: 'no-store' }).then(r => r.json()),
-                fetch('data/rank_history.json' + bust, { cache: 'no-store' }).then(r => r.json()).catch(() => ({})),
-                fetch('/fetch-prices', { method: 'POST' }).then(r => r.json())
+                fetch('data/rank_history.json' + bust, { cache: 'no-store' }).then(r => r.json()).catch(() => ({}))
             ]);
-            if (!liveResp.success) throw new Error(liveResp.error || '实时行情接口返回失败');
-
-            const live = liveResp.prices;
+            const live = await loadLive(Object.keys(data.prices || {}));
+            const expected = Object.keys(data.prices || {}).length;
+            if (Object.keys(live).length < expected) throw new Error('只取到 ' + Object.keys(live).length + '/' + expected + ' 只 ETF 的实时价，请稍后重试');
             const dates = data.dates || [];
             const lastDate = dates[dates.length - 1];
             const todayBj = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
@@ -115,7 +142,7 @@ button{padding:8px 14px;background:#1a2a3a;color:#7dd3fc;border:1px solid #253a4
         } catch (e) {
             box.innerHTML = '';
             status.style.color = '#f87171';
-            status.textContent = '获取失败：' + e.message + '。请通过本机服务 http://localhost:8080/intraday.html 打开。';
+            status.textContent = '获取失败：' + e.message + '。请检查网络后点"刷新实时价"重试。';
         }
     }
 
