@@ -111,13 +111,7 @@ def save_to_json(prices):
     # 周末不保存
     if today_weekday >= 5:
         print(f'[SKIP] Weekend ({today})')
-        return False
-
-    # 盘中保护：北京时间 15:00 前抓到的是盘中价，不写入正式历史
-    # 盘中想看得分请用 intraday.html 预览页（纯前端计算，不落盘）
-    if now_bj.hour < 15:
-        print(f'[SKIP] 盘中 {now_bj.strftime("%H:%M")}（北京时间 15:00 前），不写入正式数据；实时得分请用盘中预览页')
-        return False
+        return
     
     # 检查今天是否已存在
     if today in data['dates']:
@@ -128,7 +122,7 @@ def save_to_json(prices):
         )
         if unchanged:
             print(f'[SKIP] {today} 已记录且价格相同（冗余触发空转），不写文件')
-            return False
+            return
         for code, price in prices.items():
             if code in data['prices']:
                 data['prices'][code][idx] = price
@@ -146,7 +140,7 @@ def save_to_json(prices):
             # 如果大部分 ETF 价格没变，说明休市
             if same_count >= len(ETF_CODES) * 0.8:
                 print(f'[SKIP] Market closed ({today}), prices unchanged from {last_date}')
-                return False
+                return
         
         # 追加新一天
         data['dates'].append(today)
@@ -170,7 +164,6 @@ def save_to_json(prices):
         json.dump(data, f, ensure_ascii=False, indent=2)
     
     print(f'[SAVED] {file_path}')
-    return True
 
 def calc_score(prices, window_days=25, annual_days=250):
     """计算得分：年化收益率 × R²"""
@@ -319,10 +312,8 @@ if __name__ == '__main__':
     print('[START] Getting ETF prices...')
     prices = fetch_etf_prices()
     if prices:
-        if save_to_json(prices):
-            compute_and_save_rankings()
-            print(f'[DONE] Got {len(prices)} ETF prices and computed rankings')
-        else:
-            print(f'[DONE] Got {len(prices)} ETF prices（本次未写入正式数据）')
+        save_to_json(prices)
+        compute_and_save_rankings()
+        print(f'[DONE] Got {len(prices)} ETF prices and computed rankings')
     else:
         print('[FAILED] Check network')
