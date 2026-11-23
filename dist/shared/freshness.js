@@ -64,10 +64,13 @@
             if (!last) { show('bad', '🔴 无法判断数据日期', 'prices.json 缺少日期字段'); return; }
 
             if (last === today) {
-                if (lastMin !== null && now.min >= 15 * 60 + 10 && lastMin < 15 * 60) {
-                    show('warn', '🟡 今日数据为盘中价', base + ' · 收盘后自动覆写，请稍后再看');
+                // 数据的语义是"每日收盘价"：只要最后写入时间早于 15:00（A股收盘），
+                // 这行就是盘中/开盘价，无论现在几点打开都应持续提示，直到收盘后被覆写。
+                if (lastMin !== null && lastMin < 15 * 60) {
+                    show('warn', '🟡 今日数据为盘中价（非收盘）',
+                        base + ' · 收盘后应自动覆写，在此之前得分仅供参考');
                 } else {
-                    show('ok', '🟢 数据已更新至今天', base);
+                    show('ok', '🟢 数据已更新至今天（收盘价）', base);
                 }
                 return;
             }
