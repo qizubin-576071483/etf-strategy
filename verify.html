@@ -157,6 +157,7 @@ async function run() {
       if (diff>0) detail[dt]=diffs.filter(x=>Math.abs(x.diff)>=0.0011);
     });
 
+    rows.reverse(); // 最新日期排在最上面
     const tbody = document.querySelector('#resultTable tbody');
     tbody.innerHTML = rows.map(r => {
       const d = (r.storedFirst!=null && r.realFirst!=null) ? (r.storedFirst-r.realFirst) : null;
