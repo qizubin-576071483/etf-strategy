@@ -85,24 +85,37 @@ function bjToday() {
   return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
 }
 
+const KLINE_HOSTS = [
+  'https://ifzq.gtimg.cn/appstock/app/fqkline/get?param=',
+  'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param='
+];
+
 function loadKline(sym, cbName) {
+  const end = bjToday();
+  const start = new Date(Date.now() - 45*86400000 + 8*3600*1000);
+  const sd = start.getUTCFullYear()+'-'+String(start.getUTCMonth()+1).padStart(2,'0')+'-'+String(start.getUTCDate()).padStart(2,'0');
+  const param = sym+',day,'+sd+','+end+',60,qfq&_var=';
   return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    const end = bjToday();
-    const start = new Date(Date.now() - 45*86400000 + 8*3600*1000);
-    const sd = start.getUTCFullYear()+'-'+String(start.getUTCMonth()+1).padStart(2,'0')+'-'+String(start.getUTCDate()).padStart(2,'0');
-    s.src = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param='+sym+',day,'+sd+','+end+',60,qfq&_var='+cbName;
-    s.onload = () => {
-      const obj = window[cbName];
-      if (!obj || obj.code !== 0) return reject(new Error(sym+' 无数据'));
-      const d = (obj.data||{})[sym] || {};
-      const rows = d.qfqday || d.day || [];
-      const map = {};
-      rows.forEach(r => { map[r[0]] = parseFloat(r[2]); });
-      resolve(map);
-    };
-    s.onerror = () => reject(new Error(sym+' 请求失败'));
-    document.head.appendChild(s);
+    function attempt(i) {
+      if (i >= KLINE_HOSTS.length) return reject(new Error(sym+' 行情接口不可用'));
+      const cb = cbName+'_'+i;
+      const s = document.createElement('script');
+      s.src = KLINE_HOSTS[i]+param+cb;
+      const cleanup = () => { try { delete window[cb]; } catch(e) { window[cb]=undefined; } if (s.parentNode) s.parentNode.removeChild(s); };
+      s.onload = () => {
+        const obj = window[cb];
+        if (!obj || obj.code !== 0) { cleanup(); return attempt(i+1); }
+        const d = (obj.data||{})[sym] || {};
+        const rows = d.qfqday || d.day || [];
+        const map = {};
+        rows.forEach(r => { map[r[0]] = parseFloat(r[2]); });
+        cleanup();
+        resolve(map);
+      };
+      s.onerror = () => { cleanup(); attempt(i+1); };
+      document.head.appendChild(s);
+    }
+    attempt(0);
   });
 }
 
